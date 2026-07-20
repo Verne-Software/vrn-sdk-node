@@ -50,6 +50,18 @@ export interface JsonPatchOp {
 }
 
 // ---------------------------------------------------------------------------
+// Tenant Settings
+// ---------------------------------------------------------------------------
+
+/** Security-related Gate Identity settings for your tenant. */
+export interface SecuritySettings {
+  /** Whether email-OTP (passwordless) login is enabled. */
+  passwordless_enabled: boolean;
+  /** Whether TOTP two-factor authentication is enabled. */
+  mfa_enabled: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Access & Authorization
 // ---------------------------------------------------------------------------
 

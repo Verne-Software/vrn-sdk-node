@@ -103,6 +103,30 @@ await verne.gate.identities.patch(identity.id, [
 
 // Delete a user
 await verne.gate.identities.delete(identity.id);
+
+// Activate / deactivate a user (an inactive user cannot log in)
+await verne.gate.identities.deactivate(identity.id);
+await verne.gate.identities.activate(identity.id);
+// …or set the state explicitly:
+await verne.gate.identities.setState(identity.id, 'inactive');
+
+// Resend the email verification link
+await verne.gate.identities.resendVerification(identity.id);
+```
+
+### Security Settings
+
+Read or replace the tenant's security settings (passwordless login, TOTP MFA):
+
+```ts
+const security = await verne.gate.settings.getSecurity();
+// security.passwordless_enabled, security.mfa_enabled
+
+// Both fields are required — the update is a full replacement, not a merge.
+await verne.gate.settings.updateSecurity({
+  passwordless_enabled: true,
+  mfa_enabled: false,
+});
 ```
 
 ### Access Tokens

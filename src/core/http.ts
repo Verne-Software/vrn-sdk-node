@@ -36,6 +36,10 @@ export class HttpClient {
     return this.request<T>('POST', path, options);
   }
 
+  async put<T>(path: string, options?: HttpRequestOptions): Promise<T> {
+    return this.request<T>('PUT', path, options);
+  }
+
   async patch<T>(path: string, options?: HttpRequestOptions): Promise<T> {
     return this.request<T>('PATCH', path, options);
   }

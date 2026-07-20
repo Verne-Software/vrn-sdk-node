@@ -1,12 +1,14 @@
 import { HttpClient } from '../../core/http.js';
 import type { RequestOptions, ServiceConfig } from '../../core/types.js';
 import { IdentitiesResource } from './identities.js';
+import { SettingsResource } from './settings.js';
 import { TokensResource } from './tokens.js';
 import type { AuthorizeParams, AuthorizeResult } from './types.js';
 
 export class Gate {
   readonly identities: IdentitiesResource;
   readonly tokens: TokensResource;
+  readonly settings: SettingsResource;
 
   private readonly http: HttpClient;
 
@@ -18,6 +20,7 @@ export class Gate {
     });
     this.identities = new IdentitiesResource(this.http);
     this.tokens = new TokensResource(this.http, config.apiKey);
+    this.settings = new SettingsResource(this.http);
   }
 
   /**

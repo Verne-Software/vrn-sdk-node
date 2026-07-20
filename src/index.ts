@@ -26,6 +26,7 @@ export type {
   IdentityTraits,
   CreateIdentityParams,
   JsonPatchOp,
+  SecuritySettings,
   AccessToken,
   CreateTokenParams,
   IntrospectResult,

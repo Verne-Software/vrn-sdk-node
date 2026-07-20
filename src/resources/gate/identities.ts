@@ -47,4 +47,45 @@ export class IdentitiesResource {
   async delete(identityId: string, options?: RequestOptions): Promise<void> {
     return this.http.delete<void>(`/v1/gate/identities/${identityId}`, options);
   }
+
+  /**
+   * Activates or deactivates an identity. An `inactive` identity cannot log in —
+   * Kratos rejects its credentials automatically — until it is reactivated.
+   * The identity is not deleted. Fires the `identity.state_changed` webhook event.
+   *
+   * @example
+   * await gate.identities.setState('identity_123', 'inactive');
+   */
+  async setState(
+    identityId: string,
+    state: 'active' | 'inactive',
+    options?: RequestOptions,
+  ): Promise<Identity> {
+    return this.http.patch<Identity>(`/v1/gate/identities/${identityId}/state`, {
+      body: { state },
+      ...options,
+    });
+  }
+
+  /** Convenience wrapper for {@link setState}(identityId, 'active'). */
+  async activate(identityId: string, options?: RequestOptions): Promise<Identity> {
+    return this.setState(identityId, 'active', options);
+  }
+
+  /** Convenience wrapper for {@link setState}(identityId, 'inactive'). */
+  async deactivate(identityId: string, options?: RequestOptions): Promise<Identity> {
+    return this.setState(identityId, 'inactive', options);
+  }
+
+  /**
+   * Triggers a new email verification flow for an identity — useful when the
+   * original verification email expired or was never received. The user receives
+   * a fresh verification email. Resolves on `204 No Content`.
+   */
+  async resendVerification(identityId: string, options?: RequestOptions): Promise<void> {
+    return this.http.post<void>(
+      `/v1/gate/identities/${identityId}/resend-verification`,
+      options,
+    );
+  }
 }

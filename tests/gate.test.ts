@@ -86,6 +86,49 @@ describe('Gate', () => {
     });
   });
 
+  describe('identities.setState()', () => {
+    it('sends PATCH /v1/gate/identities/:id/state with the state body', async () => {
+      const identity = { id: 'identity_1', schema_id: 'user', state: 'inactive', traits: { email: 'a@b.com', tenant_id: 'ten_1' } };
+      const spy = mockFetch(200, identity);
+
+      const result = await gate.identities.setState('identity_1', 'inactive');
+
+      expect(result).toEqual(identity);
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/v1/gate/identities/identity_1/state');
+      expect(init?.method).toBe('PATCH');
+      expect(JSON.parse(init?.body as string)).toEqual({ state: 'inactive' });
+    });
+
+    it('activate() sends state=active', async () => {
+      const spy = mockFetch(200, { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com', tenant_id: 'ten_1' } });
+
+      await gate.identities.activate('identity_1');
+
+      expect(JSON.parse(spy.mock.calls[0][1]?.body as string)).toEqual({ state: 'active' });
+    });
+
+    it('deactivate() sends state=inactive', async () => {
+      const spy = mockFetch(200, { id: 'identity_1', schema_id: 'user', state: 'inactive', traits: { email: 'a@b.com', tenant_id: 'ten_1' } });
+
+      await gate.identities.deactivate('identity_1');
+
+      expect(JSON.parse(spy.mock.calls[0][1]?.body as string)).toEqual({ state: 'inactive' });
+    });
+  });
+
+  describe('identities.resendVerification()', () => {
+    it('sends POST /v1/gate/identities/:id/resend-verification', async () => {
+      const spy = mockFetch(204, null);
+
+      await gate.identities.resendVerification('identity_1');
+
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/v1/gate/identities/identity_1/resend-verification');
+      expect(init?.method).toBe('POST');
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Tokens
   // ---------------------------------------------------------------------------
@@ -157,6 +200,37 @@ describe('Gate', () => {
 
       const result = await gate.authorize({ subject: 'usr_2', action: 'relay.messages.write', resource: 'tenant:ten_1' });
       expect(result.allowed).toBe(false);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------------
+
+  describe('settings.getSecurity()', () => {
+    it('sends GET /v1/gate/settings/security', async () => {
+      const settings = { passwordless_enabled: true, mfa_enabled: false };
+      const spy = mockFetch(200, settings);
+
+      const result = await gate.settings.getSecurity();
+
+      expect(result).toEqual(settings);
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/v1/gate/settings/security');
+      expect(init?.method).toBe('GET');
+    });
+  });
+
+  describe('settings.updateSecurity()', () => {
+    it('sends PUT /v1/gate/settings/security with both fields', async () => {
+      const spy = mockFetch(200, { status: 'ok' });
+
+      await gate.settings.updateSecurity({ passwordless_enabled: true, mfa_enabled: true });
+
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/v1/gate/settings/security');
+      expect(init?.method).toBe('PUT');
+      expect(JSON.parse(init?.body as string)).toEqual({ passwordless_enabled: true, mfa_enabled: true });
     });
   });
 

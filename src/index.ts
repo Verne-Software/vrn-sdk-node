@@ -27,6 +27,8 @@ export type {
   CreateIdentityParams,
   JsonPatchOp,
   SecuritySettings,
+  OidcProvider,
+  LoginFlow,
   AccessToken,
   CreateTokenParams,
   IntrospectResult,

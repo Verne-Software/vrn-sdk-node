@@ -235,6 +235,70 @@ describe('Gate', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Social auth (OIDC providers)
+  // ---------------------------------------------------------------------------
+
+  describe('settings.getOidcProviders()', () => {
+    it('sends GET /v1/gate/settings/oidc-providers and unwraps providers', async () => {
+      const providers = [
+        { provider: 'github', enabled: true },
+        { provider: 'google', enabled: false },
+      ];
+      const spy = mockFetch(200, { providers });
+
+      const result = await gate.settings.getOidcProviders();
+
+      expect(result).toEqual(providers);
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/v1/gate/settings/oidc-providers');
+      expect(init?.method).toBe('GET');
+    });
+  });
+
+  describe('settings.updateOidcProviders()', () => {
+    it('sends PUT /v1/gate/settings/oidc-providers wrapped in { providers }', async () => {
+      const providers = [{ provider: 'github', enabled: true }];
+      const spy = mockFetch(200, { providers });
+
+      const result = await gate.settings.updateOidcProviders(providers);
+
+      expect(result).toEqual(providers);
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/v1/gate/settings/oidc-providers');
+      expect(init?.method).toBe('PUT');
+      expect(JSON.parse(init?.body as string)).toEqual({ providers });
+    });
+  });
+
+  describe('gate.getEnabledProviders()', () => {
+    it('sends GET /public/gate/providers/:id without an Authorization header', async () => {
+      const spy = mockFetch(200, { providers: ['github', 'google'] });
+
+      const result = await gate.getEnabledProviders('ten_001');
+
+      expect(result).toEqual(['github', 'google']);
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/public/gate/providers/ten_001');
+      expect(init?.method).toBe('GET');
+      expect((init?.headers as Record<string, string>)?.Authorization).toBeUndefined();
+    });
+  });
+
+  describe('gate.createLoginFlow()', () => {
+    it('sends GET /v1/gate/auth/login and returns the raw flow', async () => {
+      const flow = { id: 'flow_1', ui: { action: 'https://api.vernesoft.com/auth/x', nodes: [] } };
+      const spy = mockFetch(200, flow);
+
+      const result = await gate.createLoginFlow();
+
+      expect(result).toEqual(flow);
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/v1/gate/auth/login');
+      expect(init?.method).toBe('GET');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Error handling
   // ---------------------------------------------------------------------------
 

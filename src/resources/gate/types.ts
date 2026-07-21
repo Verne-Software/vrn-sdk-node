@@ -61,6 +61,25 @@ export interface SecuritySettings {
   mfa_enabled: boolean;
 }
 
+/**
+ * A social login (OAuth 2.0 / OIDC) provider and whether it is enabled for
+ * your tenant's end-users.
+ */
+export interface OidcProvider {
+  /** Provider identifier, e.g. `'github'`, `'google'`, `'gitlab'`. */
+  provider: string;
+  /** Whether the provider appears in your tenant's login/registration UI. */
+  enabled: boolean;
+}
+
+/**
+ * A Kratos self-service auth flow returned by {@link Gate.createLoginFlow}.
+ *
+ * The shape mirrors the raw Ory Kratos flow JSON (`ui.nodes`, `ui.action`,
+ * …); pass it straight to your browser-side code to render social buttons.
+ */
+export type LoginFlow = Record<string, unknown>;
+
 // ---------------------------------------------------------------------------
 // Access & Authorization
 // ---------------------------------------------------------------------------

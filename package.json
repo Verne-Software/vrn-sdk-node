@@ -1,6 +1,6 @@
 {
   "name": "@vernesoft/node",
-  "version": "0.4.0",
+  "version": "1.1.0",
   "description": "Official Node.js and TypeScript SDK for the Verne Nautilus platform",
   "license": "MIT",
   "author": "Verne Software",

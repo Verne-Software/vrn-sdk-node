@@ -28,6 +28,8 @@ export interface VerneConfig {
   relay?: string;
   /** API key for the Gate (Auth-as-a-Service) service. Format: vrn_gate_<env>_<secret> */
   gate?: string;
+  /** API key for the Passepartout (Telegram Auth) service. Format: vrn_passepartout_<env>_<secret> */
+  passepartout?: string;
   /** Base URL override. Defaults to https://api.vernesoft.com */
   baseUrl?: string;
   /** Default request timeout in milliseconds. Defaults to 30000. */

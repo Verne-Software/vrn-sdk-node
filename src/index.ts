@@ -4,6 +4,7 @@ export { Verne } from './verne.js';
 // Per-service clients
 export { Relay } from './resources/relay/relay.js';
 export { Gate } from './resources/gate/gate.js';
+export { Passepartout } from './resources/passepartout/passepartout.js';
 
 // Errors
 export { VerneError, VerneAPIError } from './core/errors.js';
@@ -35,3 +36,11 @@ export type {
   AuthorizeParams,
   AuthorizeResult,
 } from './resources/gate/types.js';
+
+// Passepartout types
+export type {
+  LoginStart,
+  LoginStatus,
+  TelegramUser,
+  TokenIntrospection,
+} from './resources/passepartout/types.js';

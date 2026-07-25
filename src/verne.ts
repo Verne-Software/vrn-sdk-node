@@ -1,5 +1,6 @@
 import { VerneError } from './core/errors.js';
 import type { VerneConfig } from './core/types.js';
+import { Clockwork } from './resources/clockwork/clockwork.js';
 import { Gate } from './resources/gate/gate.js';
 import { Passepartout } from './resources/passepartout/passepartout.js';
 import { Relay } from './resources/relay/relay.js';
@@ -9,11 +10,12 @@ export class Verne {
   private _relay?: Relay;
   private _gate?: Gate;
   private _passepartout?: Passepartout;
+  private _clockwork?: Clockwork;
 
   constructor(config: VerneConfig) {
-    if (!config.relay && !config.gate && !config.passepartout) {
+    if (!config.relay && !config.gate && !config.passepartout && !config.clockwork) {
       throw new VerneError(
-        'At least one service key (relay, gate, or passepartout) must be provided.',
+        'At least one service key (relay, gate, passepartout, or clockwork) must be provided.',
       );
     }
     this.config = config;
@@ -59,5 +61,19 @@ export class Verne {
       timeoutMs: this.config.timeoutMs,
     });
     return this._passepartout;
+  }
+
+  get clockwork(): Clockwork {
+    if (!this.config.clockwork) {
+      throw new VerneError(
+        'Clockwork API key not provided. Pass `clockwork` in the Verne constructor config.',
+      );
+    }
+    this._clockwork ??= new Clockwork({
+      apiKey: this.config.clockwork,
+      baseUrl: this.config.baseUrl,
+      timeoutMs: this.config.timeoutMs,
+    });
+    return this._clockwork;
   }
 }

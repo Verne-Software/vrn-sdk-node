@@ -30,6 +30,8 @@ export interface VerneConfig {
   gate?: string;
   /** API key for the Passepartout (Telegram Auth) service. Format: vrn_passepartout_<env>_<secret> */
   passepartout?: string;
+  /** API key for the Clockwork (Cron-as-a-Service) service. Format: vrn_clockwork_<env>_<secret> */
+  clockwork?: string;
   /** Base URL override. Defaults to https://api.vernesoft.com */
   baseUrl?: string;
   /** Default request timeout in milliseconds. Defaults to 30000. */

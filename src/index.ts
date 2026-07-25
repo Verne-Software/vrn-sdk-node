@@ -5,6 +5,7 @@ export { Verne } from './verne.js';
 export { Relay } from './resources/relay/relay.js';
 export { Gate } from './resources/gate/gate.js';
 export { Passepartout } from './resources/passepartout/passepartout.js';
+export { Clockwork } from './resources/clockwork/clockwork.js';
 
 // Errors
 export { VerneError, VerneAPIError } from './core/errors.js';
@@ -44,3 +45,13 @@ export type {
   TelegramUser,
   TokenIntrospection,
 } from './resources/passepartout/types.js';
+
+// Clockwork types
+export type {
+  CronJob,
+  CreateCronJobParams,
+  UpdateCronJobParams,
+  DelayedJob,
+  CreateDelayedJobParams,
+  Execution,
+} from './resources/clockwork/types.js';

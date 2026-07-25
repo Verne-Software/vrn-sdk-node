@@ -27,18 +27,20 @@ pnpm add @verne-software/sdk
 import { Verne } from '@verne-software/sdk';
 
 const verne = new Verne({
-  relay: process.env.VERNE_RELAY_KEY,
-  gate:  process.env.VERNE_GATE_KEY,
+  relay:     process.env.VERNE_RELAY_KEY,
+  gate:      process.env.VERNE_GATE_KEY,
+  clockwork: process.env.VERNE_CLOCKWORK_KEY,
 });
 ```
 
 You can also instantiate services independently if you only need one:
 
 ```ts
-import { Relay, Gate } from '@verne-software/sdk';
+import { Relay, Gate, Clockwork } from '@verne-software/sdk';
 
-const relay = new Relay({ apiKey: process.env.VERNE_RELAY_KEY });
-const gate  = new Gate({ apiKey: process.env.VERNE_GATE_KEY });
+const relay     = new Relay({ apiKey: process.env.VERNE_RELAY_KEY });
+const gate      = new Gate({ apiKey: process.env.VERNE_GATE_KEY });
+const clockwork = new Clockwork({ apiKey: process.env.VERNE_CLOCKWORK_KEY });
 ```
 
 ## Relay — Webhooks-as-a-Service
@@ -168,6 +170,58 @@ const decision = await verne.gate.authorize({
 if (!decision.allowed) {
   throw new Error('Forbidden');
 }
+```
+
+## Clockwork — Cron-as-a-Service
+
+Schedule recurring and one-shot HTTP jobs. The `tenant_id` is automatically scoped to your API key.
+
+### Cron Jobs
+
+```ts
+// Create a recurring job
+const job = await verne.clockwork.jobs.create({
+  name: 'nightly-report',
+  schedule: '0 2 * * *', // cron expression
+  url: 'https://example.com/hooks/report',
+  method: 'POST',                       // optional, defaults to POST
+  headers: { 'X-Api-Key': 'secret' },   // optional
+  body: JSON.stringify({ scope: 'all' }), // optional
+});
+
+// List all cron jobs (returns CronJob[])
+const jobs = await verne.clockwork.jobs.list();
+
+// Update a job (partial — only the fields you pass are changed)
+await verne.clockwork.jobs.update(job.id, { schedule: '0 3 * * *', is_active: false });
+
+// Inspect the execution history (returns Execution[])
+const runs = await verne.clockwork.jobs.executions(job.id);
+
+// Delete a job
+await verne.clockwork.jobs.delete(job.id);
+```
+
+### Delayed Jobs
+
+One-shot jobs that fire once at a specific time:
+
+```ts
+// Schedule a delayed job
+const delayed = await verne.clockwork.delayed.create({
+  name: 'send-reminder',
+  run_at: '2026-01-01T09:00:00Z', // ISO 8601 timestamp
+  url: 'https://example.com/hooks/reminder',
+});
+
+// List all delayed jobs (returns DelayedJob[])
+const pending = await verne.clockwork.delayed.list();
+
+// Inspect the execution history (returns Execution[])
+const runs = await verne.clockwork.delayed.executions(delayed.id);
+
+// Cancel a pending job
+await verne.clockwork.delayed.cancel(delayed.id);
 ```
 
 ## Error Handling

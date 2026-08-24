@@ -1,4 +1,4 @@
-import { VerneAPIError, VerneError, type APIErrorBody } from './errors.js';
+import { VerneAPIError, VerneError } from './errors.js';
 import type { RequestOptions } from './types.js';
 
 const DEFAULT_BASE_URL = 'https://api.vernesoft.com';
@@ -103,9 +103,9 @@ export class HttpClient {
     }
 
     if (!response.ok) {
-      let errorBody: APIErrorBody;
+      let errorBody: unknown;
       try {
-        errorBody = (await response.json()) as APIErrorBody;
+        errorBody = await response.json();
       } catch {
         throw new VerneError(`HTTP ${response.status}: ${method} ${path}`);
       }

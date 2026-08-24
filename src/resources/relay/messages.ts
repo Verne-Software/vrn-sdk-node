@@ -14,6 +14,10 @@ export class MessagesResource {
    * Publish an event to all endpoints subscribed to the given event_type.
    * Automatically retries once on 429 (respects Retry-After header).
    *
+   * Safe to retry beyond that, if you pass an `idempotency_key`: a repeat
+   * returns the originally accepted message rather than creating a second event
+   * or failing.
+   *
    * @returns The accepted message with its assigned ID and timestamp.
    */
   async send(params: SendMessageParams, options?: RequestOptions): Promise<Message> {

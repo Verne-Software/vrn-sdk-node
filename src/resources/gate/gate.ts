@@ -50,7 +50,8 @@ export class Gate {
    *   that organization? `reason` is one of a fixed set and `role` is the role they hold.
    *   Prefer `gate.organizations.authorize()` / `can()`, which build the resource.
    * - any other resource — only *is `subject` one of your active end users?*; `reason` is
-   *   a sentence for people.
+   *   `owned_by_tenant` (allowed), `subject_inactive`, `not_owned_by_tenant` or
+   *   `not_a_known_identity`, and `message` says it in a sentence for your logs.
    *
    * @example
    * const decision = await gate.authorize({

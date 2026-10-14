@@ -56,7 +56,21 @@ describe('Gate — sessions, metadata, audit log, lifecycle, flows', () => {
       expect(call(spy, 1).url).toBe(`${BASE}/v1/gate/sessions/8e4f0b2a-3c1d-4e5f-9a6b-7c8d9e0f1a2b`);
     });
 
-    it('revokeAll() surfaces the identity service\'s own 404 body without failing to parse it', async () => {
+    it('revokeAll() resolves on 204 — also for a user with no session', async () => {
+      mockFetch(204, null);
+      await expect(gate.sessions.revokeAll(USER)).resolves.toBeUndefined();
+    });
+
+    it('revokeAll() reads a 404 not_found in the envelope', async () => {
+      mockFetch(404, { error: { code: 'not_found', message: 'Identity not found', request_id: 'req_1' } });
+      const err = await gate.sessions.revokeAll(USER).catch((e) => e);
+      expect(err).toBeInstanceOf(VerneAPIError);
+      expect(err.status).toBe(404);
+      expect(err.code).toBe('not_found');
+      expect(err.requestId).toBe('req_1');
+    });
+
+    it('an identity-service body with a numeric code still parses (fallback)', async () => {
       mockFetch(404, { error: { code: 404, status: 'Not Found', message: 'Unable to locate the resource' } });
       const err = await gate.sessions.revokeAll(USER).catch((e) => e);
       expect(err).toBeInstanceOf(VerneAPIError);
@@ -303,7 +317,21 @@ describe('Clockwork.usage()', () => {
     expect(call(spy).url).toBe(`${BASE}/v1/clockwork/usage`);
   });
 
-  it('a Clockwork string error keeps its sentence', async () => {
+  it('a Clockwork error is the standard envelope', async () => {
+    mockFetch(400, {
+      error: { code: 'invalid_payload', message: 'Invalid cron schedule.', request_id: 'req_cw' },
+    });
+    const cw = new Clockwork({ apiKey: API_KEY });
+    const err = await cw.jobs
+      .create({ name: 'x', schedule: 'nope', url: 'https://example.com' })
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(VerneAPIError);
+    expect(err.code).toBe('invalid_payload');
+    expect(err.message).toBe('Invalid cron schedule.');
+    expect(err.requestId).toBe('req_cw');
+  });
+
+  it('the older string form still keeps its sentence (fallback)', async () => {
     mockFetch(400, { error: 'Invalid cron schedule. Expected a 5-field POSIX cron expression' });
     const cw = new Clockwork({ apiKey: API_KEY });
     const err = await cw.jobs

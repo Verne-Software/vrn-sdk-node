@@ -181,7 +181,12 @@ describe('Gate', () => {
 
   describe('gate.authorize()', () => {
     it('sends POST /v1/gate/authorize', async () => {
-      const decision = { allowed: true, decision_id: 'dec_1', reason: 'role=admin' };
+      const decision = {
+        allowed: true,
+        decision_id: 'dec_1',
+        reason: 'owned_by_tenant',
+        message: 'subject `usr_1` is an identity owned by tenant `ten_1`',
+      };
       const spy = mockFetch(200, decision);
 
       const result = await gate.authorize({
@@ -196,10 +201,12 @@ describe('Gate', () => {
     });
 
     it('returns allowed: false without throwing', async () => {
-      mockFetch(200, { allowed: false, decision_id: 'dec_2', reason: 'no matching policy' });
+      mockFetch(200, { allowed: false, decision_id: 'dec_2', reason: 'not_a_known_identity', message: 'no identity `usr_2`' });
 
       const result = await gate.authorize({ subject: 'usr_2', action: 'relay.messages.write', resource: 'tenant:ten_1' });
       expect(result.allowed).toBe(false);
+      expect(result.reason).toBe('not_a_known_identity');
+      expect(result.message).toBe('no identity `usr_2`');
     });
   });
 

@@ -220,16 +220,34 @@ export type OrganizationAuthorizeReason =
   | 'subject_inactive'
   | 'no_such_organization';
 
+/**
+ * Why a check on any resource that is not an organization answered as it did — the only
+ * question it asks is *is `subject` one of your active end users?* `owned_by_tenant` is
+ * the one `allowed: true` answer.
+ */
+export type OwnershipAuthorizeReason =
+  | 'owned_by_tenant'
+  | 'subject_inactive'
+  | 'not_owned_by_tenant'
+  | 'not_a_known_identity';
+
 /** Authorization decision returned by gate.authorize(). */
 export interface AuthorizeResult {
   allowed: boolean;
   /** Identifies the decision in Gate's logs, for support. */
   decision_id: string;
   /**
-   * For an organization resource, one of {@link OrganizationAuthorizeReason}. For any
-   * other resource, a sentence for people, not a value to branch on.
+   * A code to branch on: one of {@link OrganizationAuthorizeReason} for an organization
+   * resource, one of {@link OwnershipAuthorizeReason} for any other. The set is open —
+   * treat an unknown value as a denial.
    */
-  reason: OrganizationAuthorizeReason | (string & {});
+  reason: OrganizationAuthorizeReason | OwnershipAuthorizeReason | (string & {});
+  /**
+   * For a resource that is not an organization: the decision as a sentence, for your
+   * logs. Its wording can change; only `reason` is a contract. Absent for an
+   * organization decision.
+   */
+  message?: string;
   /**
    * The role the user holds in the organization — present for
    * `member_with_permission`, `member_without_permission` and `subject_inactive`.

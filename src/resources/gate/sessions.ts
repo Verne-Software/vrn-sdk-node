@@ -16,7 +16,10 @@ export class SessionsResource {
    * Revokes every session of an end user — "log out everywhere". Signed tokens already
    * issued keep verifying until their own `exp` (at most 15 minutes).
    *
-   * Note: the API answers `404` when the user has no session at all.
+   * Idempotent: a user of yours with no session at all is a success too. An id that is not
+   * one of your users — another account's, unknown, or one you deleted — is
+   * `403 forbidden`. `404 not_found` is rare: a user removed from the identity service
+   * other than through `identities.delete()`, which Gate still remembered as yours.
    */
   async revokeAll(identityId: string, options?: RequestOptions): Promise<void> {
     return this.http.delete<void>(`/v1/gate/identities/${seg(identityId)}/sessions`, options);

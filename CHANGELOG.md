@@ -36,6 +36,18 @@ All notable changes to `@verne-software/sdk`. The format follows
   `required_aal`, …) and `VerneAPIError.retryAfter`.
 - `npm run test:integration`: an opt-in suite against a running stack.
 
+### Changed
+
+- Aligned with the API changes of October 2026: `AuthorizeResult` gains `message`, and
+  `reason` is typed for every resource — `OwnershipAuthorizeReason` (`owned_by_tenant`,
+  `subject_inactive`, `not_owned_by_tenant`, `not_a_known_identity`) beside the
+  organization codes; the sentence the ownership check used to put in `reason` is now
+  `message`. `sessions.revokeAll()` is documented as succeeding for a user with no
+  session (`204`, it was a `404`). Docs and comments name `invalid_payload` (not
+  `invalid_request`) for a malformed token request and treat Clockwork errors as the
+  standard envelope; the string-form and numeric-code parsing stays as a fallback.
+  Identities no longer carry `metadata_public.verne_tenant_id`; the SDK never read it.
+
 ### Fixed
 
 - `gate.tokens.create()` sent the key in the request body without an

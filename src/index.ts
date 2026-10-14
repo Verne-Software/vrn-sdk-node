@@ -50,6 +50,7 @@ export type {
   AuthorizeParams,
   AuthorizeResult,
   OrganizationAuthorizeReason,
+  OwnershipAuthorizeReason,
   OrgClaim,
   SignedToken,
   SignedTokenClaims,

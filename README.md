@@ -166,7 +166,12 @@ const decision = await verne.gate.organizations.authorize(org.id, identity.id, '
 
 `reason` is one of `member_with_permission`, `member_without_permission`, `not_a_member`, `subject_inactive`, `no_such_organization`; `role` is present when the user is a member. The match is exact (no wildcards) and live. A permission no role could hold (`Invoices:*`, the `nautilus:` prefix) is a `400 invalid_payload` error, never `false`.
 
-`gate.authorize({ subject, action, resource })` is the same endpoint; with any resource that is not `organization:<id>` it only says whether `subject` is one of your active end users.
+`gate.authorize({ subject, action, resource })` is the same endpoint; with any resource that is not `organization:<id>` it only says whether `subject` is one of your active end users. Its `reason` is a code too: `owned_by_tenant` (the one `allowed: true`), `subject_inactive`, `not_owned_by_tenant`, `not_a_known_identity`. The sentence a person would read is in `message`, for your logs — its wording can change, `reason` is the contract.
+
+```ts
+const decision = await verne.gate.authorize({ subject: identity.id, action: 'read', resource: 'doc:1' });
+// { allowed: true, decision_id: 'dec_…', reason: 'owned_by_tenant', message: 'subject `…` is an identity owned by tenant `…`' }
+```
 
 ### Sessions
 
@@ -179,6 +184,8 @@ const sessions = await verne.gate.sessions.list(identity.id);
 await verne.gate.sessions.revoke(sessions[0].id); // one device
 await verne.gate.sessions.revokeAll(identity.id); // everywhere
 ```
+
+`revokeAll()` succeeds also when the user has no session, so a "log out everywhere" button can be pressed twice. An id that is not one of your users (another account's, unknown, or one you deleted) is `403 forbidden`.
 
 With MFA required (`settings.updateSecurity({ passwordless_enabled, mfa_enabled: true })`), `check()` throws a `VerneAPIError` with code `mfa_required` and `details.required_aal === 'aal2'`; start a step-up flow with `gate.createLoginFlow({ aal: 'aal2', session_token: sessionToken })`. A dead, foreign or unknown session is `401`.
 
@@ -368,7 +375,7 @@ try {
 | 429 | `rate_limited`, `RELAY_MESSAGE_LIMIT_REACHED` | Too fast, or Relay's monthly limit. |
 | 5xx | `upstream_unavailable`, `internal_error` | Retry; quote `requestId` to support. |
 
-Codes are an open set; treat unknown ones generically. Engine errors that are not in the standard envelope (some Clockwork refusals) arrive with `code: 'unknown'` and their sentence in `message`.
+Codes are an open set; treat unknown ones generically. Every API route, Clockwork's included, answers in this envelope with a string `code` and a `requestId`. A body in another shape (one that did not come from the API — a proxy in between, an identity-service answer passed through on `/auth/*`) still becomes a `VerneAPIError`, with `code: 'unknown'` and whatever sentence it had in `message`.
 
 **Retries.** A `POST` that gets a short `429` (a `Retry-After` of a minute or less) is retried once after waiting. Relay's monthly limit (`429 RELAY_MESSAGE_LIMIT_REACHED`, `Retry-After` until the 1st) and every `402` are thrown at once.
 

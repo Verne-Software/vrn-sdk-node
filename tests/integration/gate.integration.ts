@@ -226,9 +226,46 @@ suite('Gate 1.4.0 against a live stack', () => {
     expect(await gate.organizations.can(org.id, member.id, 'members:invite')).toBe(false);
     await expectApiError(gate.organizations.can(org.id, member.id, 'Invoices:*'), 400, 'invalid_payload');
 
-    // The plain ownership check still works, and says so in a sentence.
+    // The plain ownership check: a code in `reason`, the sentence in `message`.
     const owned = await gate.authorize({ subject: member.id, action: 'read', resource: 'doc:1' });
-    expect(owned.allowed).toBe(true);
+    expect(owned).toMatchObject({ allowed: true, reason: 'owned_by_tenant' });
+    expect(owned.message).toMatch(/is an identity owned by tenant/);
+    const nobody = await gate.authorize({ subject: randomUUID(), action: 'read', resource: 'doc:1' });
+    expect(nobody).toMatchObject({ allowed: false, reason: 'not_a_known_identity' });
+    const notAnId = await gate.authorize({ subject: 'usr_123', action: 'read', resource: 'doc:1' });
+    expect(notAnId).toMatchObject({ allowed: false, reason: 'not_a_known_identity' });
+    await gate.identities.deactivate(outsider.id);
+    try {
+      const off = await gate.authorize({ subject: outsider.id, action: 'read', resource: 'doc:1' });
+      expect(off).toMatchObject({ allowed: false, reason: 'subject_inactive' });
+    } finally {
+      await gate.identities.activate(outsider.id);
+    }
+  });
+
+  it('revokeAll: idempotent for a user with no session; 403 for an id not yours', async () => {
+    await gate.sessions.revokeAll(outsider.id); // never signed in
+    await gate.sessions.revokeAll(outsider.id); // and again
+    await expectApiError(gate.sessions.revokeAll(randomUUID()), 403, 'forbidden');
+
+    const gone = await gate.identities.create({ schema_id: 'user', traits: { email: email('gone') } });
+    await gate.identities.delete(gone.id);
+    // Deleted through the API: no longer yours, so 403 like any other stranger.
+    await expectApiError(gate.sessions.revokeAll(gone.id), 403, 'forbidden');
+  });
+
+  it('a malformed token request is 400 invalid_payload with a request id', async () => {
+    const err = await expectApiError(
+      gate.tokens.create({ subject: 'x', ttl_seconds: 'soon' as unknown as number }),
+      400,
+      'invalid_payload',
+    );
+    expect(err.requestId).toMatch(/^req_/);
+  });
+
+  it('identities no longer carry the owner stamp', async () => {
+    const read = await gate.identities.get(member.id);
+    expect(JSON.stringify(read)).not.toContain('verne_tenant_id');
   });
 
   it('introspection lists the end user\'s organizations', async () => {
@@ -274,6 +311,7 @@ suite('Gate 1.4.0 against a live stack', () => {
     await expectApiError(gate.tokens.createSigned(sessionToken), 401);
     await expectApiError(gate.sessions.check(sessionToken), 401, 'unauthorized');
     await expectApiError(gate.sessions.revoke(randomUUID()), 404, 'not_found');
+    await gate.sessions.revokeAll(member.id); // nothing left to revoke: still a success
   });
 
   it('audit log records the role and membership changes, filtered and paged', async () => {
@@ -374,12 +412,13 @@ suite('Clockwork 1.4.0 against a live stack', () => {
     expect(typeof usage.delayed.pending).toBe('number');
   });
 
-  it('an engine error that is a plain string keeps its sentence', async () => {
+  it('an engine error is the standard envelope, with a request id', async () => {
     const err = await expectApiError(
       clockwork.jobs.create({ name: 'sdk-bad', schedule: 'not a schedule', url: 'https://example.com' }),
       400,
-      'unknown',
+      'invalid_payload',
     );
     expect(err.message).toMatch(/cron/i);
+    expect(err.requestId).toMatch(/^req_/);
   });
 });

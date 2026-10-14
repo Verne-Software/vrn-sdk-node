@@ -17,7 +17,9 @@ export class VerneAPIError extends VerneError {
    * Machine-readable error code, e.g. `'invalid_payload'`, `'forbidden'`, `'conflict'`,
    * `'mfa_required'`, `'ACTIVE_USER_LIMIT_REACHED'`. Codes are an open set: compare
    * against the ones you handle and treat the rest generically. `'unknown'` when the
-   * response carried no string code (a Clockwork engine error, a pass-through body).
+   * response carried no string code — which the API's own routes no longer do; it is
+   * left for a body that did not come from the gateway (a proxy in between, an identity
+   * service response passed through on `/auth/*`).
    */
   readonly code: string;
   /** HTTP status code. */
@@ -71,11 +73,13 @@ export class VerneAPIError extends VerneError {
   /**
    * Builds an error from a parsed response body of *unknown* shape.
    *
-   * The documented envelope is `{ error: { code, message, request_id, ...extra } }`, but a
-   * response can also come from an engine or a pass-through that answers differently:
-   * Clockwork's `{ error: "<sentence>" }`, an identity-service body whose `code` is a
-   * number. Anything unrecognised degrades — to code `'unknown'`, to `HTTP <status>` —
-   * rather than throwing: an error path must never be the thing that fails.
+   * Every API route answers with the envelope `{ error: { code, message, request_id,
+   * ...extra } }`. Other shapes are still read, as a fallback that costs nothing: the
+   * string form `{ error: "<sentence>" }` Clockwork used before October 2026, and an
+   * identity-service body whose `code` is a number (still what Kratos' own `/auth/*`
+   * self-service routes answer). Anything unrecognised degrades — to code `'unknown'`,
+   * to `HTTP <status>` — rather than throwing: an error path must never be the thing
+   * that fails.
    */
   static fromResponse(status: number, body: unknown, retryAfter?: number): VerneAPIError {
     const envelope = isRecord(body) && isRecord(body.error) ? body.error : undefined;

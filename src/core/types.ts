@@ -1,10 +1,21 @@
 /**
  * Paginated response wrapper returned by list endpoints.
+ *
+ * Lists are cursor-paged: pass `next_cursor` back as `cursor` while `has_more` is
+ * `true`. `next_cursor` is `null` (or absent) on the last page.
  */
 export interface Paginated<T> {
   data: T[];
   has_more: boolean;
-  next_cursor?: string;
+  next_cursor?: string | null;
+}
+
+/** Query parameters shared by every cursor-paged list. */
+export interface ListParams {
+  /** Items per page, 1 to 100. Defaults to 20; the server clamps values outside the range. */
+  limit?: number;
+  /** The `next_cursor` of the previous page. Opaque: pass it back, do not parse it. */
+  cursor?: string;
 }
 
 /**
@@ -21,16 +32,24 @@ export interface RequestOptions {
 
 /**
  * Configuration for the unified Verne client.
- * Each key corresponds to a service; only provide keys for the services you use.
+ *
+ * A Nautilus API key looks like `vrn_…` and carries a set of scopes — the APIs it may
+ * call (`relay`, `gate`, `clockwork`, `passepartout`). Pass it once as `apiKey`. The
+ * per-service fields are for using a *different* key for one service; they override
+ * `apiKey` for that service. Keys created before scopes existed (`vrn_gate_…`,
+ * `vrn_relay_…`, …) keep working for the one API they name. There is no test or live
+ * mode: every key acts on your real data.
  */
 export interface VerneConfig {
-  /** API key for the Relay (Webhooks-as-a-Service) service. Format: vrn_relay_<env>_<secret> */
+  /** The API key used for every service that has no key of its own below. */
+  apiKey?: string;
+  /** Key for Relay (Webhooks-as-a-Service), when it differs from `apiKey`. */
   relay?: string;
-  /** API key for the Gate (Auth-as-a-Service) service. Format: vrn_gate_<env>_<secret> */
+  /** Key for Gate (sign-in and users), when it differs from `apiKey`. */
   gate?: string;
-  /** API key for the Passepartout (Telegram Auth) service. Format: vrn_passepartout_<env>_<secret> */
+  /** Key for Passepartout (Telegram sign-in), when it differs from `apiKey`. */
   passepartout?: string;
-  /** API key for the Clockwork (Cron-as-a-Service) service. Format: vrn_clockwork_<env>_<secret> */
+  /** Key for Clockwork (Cron-as-a-Service), when it differs from `apiKey`. */
   clockwork?: string;
   /** Base URL override. Defaults to https://api.vernesoft.com */
   baseUrl?: string;
@@ -39,10 +58,10 @@ export interface VerneConfig {
 }
 
 /**
- * Configuration for a single-service client (Relay or Gate).
+ * Configuration for a single-service client (Relay, Gate, Passepartout or Clockwork).
  */
 export interface ServiceConfig {
-  /** API key for the service. */
+  /** API key (`vrn_…`) with the scope for the service. */
   apiKey: string;
   /** Base URL override. Defaults to https://api.vernesoft.com */
   baseUrl?: string;

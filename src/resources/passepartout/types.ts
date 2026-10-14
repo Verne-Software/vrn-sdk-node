@@ -1,3 +1,5 @@
+import type { OrgClaim } from '../gate/types.js';
+
 /** The Telegram end-user captured during login. */
 export interface TelegramUser {
   id: string;
@@ -30,11 +32,21 @@ export interface LoginStatus {
   user?: TelegramUser;
 }
 
-/** Result of introspecting a Passepartout access token. */
+/**
+ * Result of introspecting a Passepartout access token. An unknown, expired or foreign
+ * token, or one whose user was deactivated or deleted, is `{ active: false }`.
+ */
 export interface TokenIntrospection {
   active: boolean;
   subject?: string;
   tenant_id?: string;
   scopes?: string[];
   expires_at?: string;
+  /**
+   * The user's organizations in the key's project, with the role held in each and its
+   * permissions — read live, the first 100 in the order they joined.
+   */
+  orgs?: OrgClaim[];
+  /** `true`, and only then, when there are more than `orgs` shows. */
+  orgs_truncated?: boolean;
 }

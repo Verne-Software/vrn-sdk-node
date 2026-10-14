@@ -5,6 +5,23 @@ import { Gate } from './resources/gate/gate.js';
 import { Passepartout } from './resources/passepartout/passepartout.js';
 import { Relay } from './resources/relay/relay.js';
 
+type ServiceName = 'relay' | 'gate' | 'passepartout' | 'clockwork';
+
+const SERVICE_LABELS: Record<ServiceName, string> = {
+  relay: 'Relay',
+  gate: 'Gate',
+  passepartout: 'Passepartout',
+  clockwork: 'Clockwork',
+};
+
+/**
+ * The unified client. Pass one API key (`apiKey`) and use any service its scopes allow;
+ * a call to a service the key has no scope for is refused by the API with `403 forbidden`.
+ *
+ * @example
+ * const verne = new Verne({ apiKey: process.env.VERNE_API_KEY });
+ * await verne.gate.organizations.create({ name: 'Acme' });
+ */
 export class Verne {
   private readonly config: VerneConfig;
   private _relay?: Relay;
@@ -13,67 +30,47 @@ export class Verne {
   private _clockwork?: Clockwork;
 
   constructor(config: VerneConfig) {
-    if (!config.relay && !config.gate && !config.passepartout && !config.clockwork) {
+    if (
+      !config.apiKey &&
+      !config.relay &&
+      !config.gate &&
+      !config.passepartout &&
+      !config.clockwork
+    ) {
       throw new VerneError(
-        'At least one service key (relay, gate, passepartout, or clockwork) must be provided.',
+        'No API key provided. Pass `apiKey` (or a per-service key: relay, gate, passepartout, clockwork).',
       );
     }
     this.config = config;
   }
 
   get relay(): Relay {
-    if (!this.config.relay) {
-      throw new VerneError(
-        'Relay API key not provided. Pass `relay` in the Verne constructor config.',
-      );
-    }
-    this._relay ??= new Relay({
-      apiKey: this.config.relay,
-      baseUrl: this.config.baseUrl,
-      timeoutMs: this.config.timeoutMs,
-    });
+    this._relay ??= new Relay(this.serviceConfig('relay'));
     return this._relay;
   }
 
   get gate(): Gate {
-    if (!this.config.gate) {
-      throw new VerneError(
-        'Gate API key not provided. Pass `gate` in the Verne constructor config.',
-      );
-    }
-    this._gate ??= new Gate({
-      apiKey: this.config.gate,
-      baseUrl: this.config.baseUrl,
-      timeoutMs: this.config.timeoutMs,
-    });
+    this._gate ??= new Gate(this.serviceConfig('gate'));
     return this._gate;
   }
 
   get passepartout(): Passepartout {
-    if (!this.config.passepartout) {
-      throw new VerneError(
-        'Passepartout API key not provided. Pass `passepartout` in the Verne constructor config.',
-      );
-    }
-    this._passepartout ??= new Passepartout({
-      apiKey: this.config.passepartout,
-      baseUrl: this.config.baseUrl,
-      timeoutMs: this.config.timeoutMs,
-    });
+    this._passepartout ??= new Passepartout(this.serviceConfig('passepartout'));
     return this._passepartout;
   }
 
   get clockwork(): Clockwork {
-    if (!this.config.clockwork) {
+    this._clockwork ??= new Clockwork(this.serviceConfig('clockwork'));
+    return this._clockwork;
+  }
+
+  private serviceConfig(service: ServiceName) {
+    const apiKey = this.config[service] ?? this.config.apiKey;
+    if (!apiKey) {
       throw new VerneError(
-        'Clockwork API key not provided. Pass `clockwork` in the Verne constructor config.',
+        `${SERVICE_LABELS[service]} API key not provided. Pass \`apiKey\` (or \`${service}\`) in the Verne constructor config.`,
       );
     }
-    this._clockwork ??= new Clockwork({
-      apiKey: this.config.clockwork,
-      baseUrl: this.config.baseUrl,
-      timeoutMs: this.config.timeoutMs,
-    });
-    return this._clockwork;
+    return { apiKey, baseUrl: this.config.baseUrl, timeoutMs: this.config.timeoutMs };
   }
 }

@@ -26,7 +26,7 @@ export interface SendMessageParams {
   /** Arbitrary JSON payload delivered to subscribers. */
   payload: Record<string, unknown>;
   /**
-   * Optional idempotency key, deduplicating within a 24-hour window.
+   * Optional idempotency key, deduplicating within a 12-hour window.
    *
    * Sending the same key twice does not create a second event and does not
    * fail: the second call returns `202` with the *originally* accepted message,

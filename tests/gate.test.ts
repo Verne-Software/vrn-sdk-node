@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Gate, VerneAPIError } from '../src/index.js';
 
-const API_KEY = 'vrn_gate_test_sk_abc123';
+const API_KEY = 'vrn_9f8a7c1b2d3e4f50';
 
 function mockFetch(status: number, body: unknown) {
   return vi.spyOn(global, 'fetch').mockResolvedValueOnce(
@@ -29,7 +29,7 @@ describe('Gate', () => {
 
   describe('identities.create()', () => {
     it('sends POST /v1/gate/identities', async () => {
-      const identity = { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com', tenant_id: 'ten_1' } };
+      const identity = { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com' } };
       const spy = mockFetch(201, identity);
 
       const result = await gate.identities.create({
@@ -48,7 +48,7 @@ describe('Gate', () => {
 
   describe('identities.get()', () => {
     it('sends GET /v1/gate/identities/:id', async () => {
-      const identity = { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com', tenant_id: 'ten_1' } };
+      const identity = { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com' } };
       const spy = mockFetch(200, identity);
 
       const result = await gate.identities.get('identity_1');
@@ -62,10 +62,10 @@ describe('Gate', () => {
 
   describe('identities.patch()', () => {
     it('sends PATCH /v1/gate/identities/:id with JSON Patch ops', async () => {
-      const updated = { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com', tenant_id: 'ten_1', custom_data: { role: 'admin' } } };
+      const updated = { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com', locale: 'en' } };
       const spy = mockFetch(200, updated);
 
-      const ops = [{ op: 'replace' as const, path: '/traits/custom_data/role', value: 'admin' }];
+      const ops = [{ op: 'replace' as const, path: '/traits/locale', value: 'en' }];
       const result = await gate.identities.patch('identity_1', ops);
 
       expect(result).toEqual(updated);
@@ -88,7 +88,7 @@ describe('Gate', () => {
 
   describe('identities.setState()', () => {
     it('sends PATCH /v1/gate/identities/:id/state with the state body', async () => {
-      const identity = { id: 'identity_1', schema_id: 'user', state: 'inactive', traits: { email: 'a@b.com', tenant_id: 'ten_1' } };
+      const identity = { id: 'identity_1', schema_id: 'user', state: 'inactive', traits: { email: 'a@b.com' } };
       const spy = mockFetch(200, identity);
 
       const result = await gate.identities.setState('identity_1', 'inactive');
@@ -101,7 +101,7 @@ describe('Gate', () => {
     });
 
     it('activate() sends state=active', async () => {
-      const spy = mockFetch(200, { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com', tenant_id: 'ten_1' } });
+      const spy = mockFetch(200, { id: 'identity_1', schema_id: 'user', state: 'active', traits: { email: 'a@b.com' } });
 
       await gate.identities.activate('identity_1');
 
@@ -109,7 +109,7 @@ describe('Gate', () => {
     });
 
     it('deactivate() sends state=inactive', async () => {
-      const spy = mockFetch(200, { id: 'identity_1', schema_id: 'user', state: 'inactive', traits: { email: 'a@b.com', tenant_id: 'ten_1' } });
+      const spy = mockFetch(200, { id: 'identity_1', schema_id: 'user', state: 'inactive', traits: { email: 'a@b.com' } });
 
       await gate.identities.deactivate('identity_1');
 
@@ -134,21 +134,21 @@ describe('Gate', () => {
   // ---------------------------------------------------------------------------
 
   describe('tokens.create()', () => {
-    it('sends api_key in body and skips Authorization header', async () => {
-      const tokenResponse = { access_token: 'gat_test_at_abc', expires_at: '2026-01-01T01:00:00Z', subject: 'usr_1', tenant_id: 'ten_1' };
-      const spy = mockFetch(200, tokenResponse);
+    it('sends the key in the Authorization header, never in the body', async () => {
+      // The gateway authenticates /v1/gate/tokens from the header only; 1.3.0 sent the
+      // key in the body without the header and got 401 for it.
+      const tokenResponse = { access_token: 'gat_live_abc', expires_at: '2026-01-01T01:00:00Z', subject: 'usr_1', tenant_id: 'ten_1' };
+      const spy = mockFetch(201, tokenResponse);
 
       const result = await gate.tokens.create({ subject: 'usr_1' });
 
       expect(result).toEqual(tokenResponse);
 
-      const [, init] = spy.mock.calls[0];
+      const [url, init] = spy.mock.calls[0];
+      expect(url).toBe('https://api.vernesoft.com/v1/gate/tokens');
       const body = JSON.parse(init?.body as string);
-      expect(body.api_key).toBe(API_KEY);
-      expect(body.subject).toBe('usr_1');
-
-      // Must NOT include Authorization header
-      expect((init?.headers as Record<string, string>)['Authorization']).toBeUndefined();
+      expect(body).toEqual({ subject: 'usr_1' });
+      expect((init?.headers as Record<string, string>)['Authorization']).toBe(`Bearer ${API_KEY}`);
     });
 
     it('includes optional scopes and ttl_seconds', async () => {
@@ -181,7 +181,12 @@ describe('Gate', () => {
 
   describe('gate.authorize()', () => {
     it('sends POST /v1/gate/authorize', async () => {
-      const decision = { allowed: true, decision_id: 'dec_1', reason: 'role=admin' };
+      const decision = {
+        allowed: true,
+        decision_id: 'dec_1',
+        reason: 'owned_by_tenant',
+        message: 'subject `usr_1` is an identity owned by tenant `ten_1`',
+      };
       const spy = mockFetch(200, decision);
 
       const result = await gate.authorize({
@@ -196,10 +201,12 @@ describe('Gate', () => {
     });
 
     it('returns allowed: false without throwing', async () => {
-      mockFetch(200, { allowed: false, decision_id: 'dec_2', reason: 'no matching policy' });
+      mockFetch(200, { allowed: false, decision_id: 'dec_2', reason: 'not_a_known_identity', message: 'no identity `usr_2`' });
 
       const result = await gate.authorize({ subject: 'usr_2', action: 'relay.messages.write', resource: 'tenant:ten_1' });
       expect(result.allowed).toBe(false);
+      expect(result.reason).toBe('not_a_known_identity');
+      expect(result.message).toBe('no identity `usr_2`');
     });
   });
 

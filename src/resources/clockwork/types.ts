@@ -94,4 +94,18 @@ export interface Execution {
   response_status: number | null;
   response_body: string | null;
   error_message: string | null;
+  /** Which attempt of the run this row is, from 1. A retried run has one row per attempt. */
+  attempt?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Usage
+// ---------------------------------------------------------------------------
+
+/** Where the tenant stands against its plan's job limits. `limit` is `null` for no limit. */
+export interface ClockworkUsage {
+  plan: string;
+  tier?: string;
+  cron: { active: number; limit: number | null };
+  delayed: { pending: number; limit: number | null };
 }

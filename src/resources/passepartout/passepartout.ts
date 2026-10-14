@@ -36,6 +36,10 @@ export class Passepartout {
    * Returns the current state of a login attempt. While the user hasn't
    * finished, `status` is `pending`; once done it becomes `completed` and
    * carries the `access_token` and `user`.
+   *
+   * Throws `VerneAPIError` with `403 account_disabled` when the person is deactivated,
+   * and `402 ACTIVE_USER_LIMIT_REACHED` when a *new* person signs in past the account's
+   * active-user limit (retrying does not help; existing users are unaffected).
    */
   async loginStatus(nonce: string, options?: RequestOptions): Promise<LoginStatus> {
     return this.http.get<LoginStatus>(

@@ -44,7 +44,7 @@ describe('VerneAPIError.fromResponse()', () => {
   });
 
   it('falls back to the status for unrecognised bodies', () => {
-    for (const body of [{}, null, undefined, 'gateway timeout', 42, [], { error: 'nope' }]) {
+    for (const body of [{}, null, undefined, 'gateway timeout', 42, [], { error: '' }]) {
       const err = VerneAPIError.fromResponse(502, body);
       expect(err.message).toBe('HTTP 502');
       expect(err.code).toBe('unknown');

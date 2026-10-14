@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Relay, VerneAPIError, VerneError } from '../src/index.js';
 
-const API_KEY = 'vrn_relay_test_sk_abc123';
+const API_KEY = 'vrn_9f8a7c1b2d3e4f50';
 
 function mockFetch(status: number, body: unknown, headers: Record<string, string> = {}) {
   return vi.spyOn(global, 'fetch').mockResolvedValueOnce(

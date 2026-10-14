@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Passepartout } from '../src/index.js';
 
-const API_KEY = 'vrn_passepartout_test_sk_abc123';
+const API_KEY = 'vrn_9f8a7c1b2d3e4f50';
 
 function mockFetch(status: number, body: unknown) {
   return vi.spyOn(global, 'fetch').mockResolvedValueOnce(

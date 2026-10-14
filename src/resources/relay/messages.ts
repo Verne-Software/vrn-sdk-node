@@ -12,7 +12,9 @@ export class MessagesResource {
 
   /**
    * Publish an event to all endpoints subscribed to the given event_type.
-   * Automatically retries once on 429 (respects Retry-After header).
+   * Retries once on a short `429` (a `Retry-After` of a minute or less). The monthly
+   * message limit (`429 RELAY_MESSAGE_LIMIT_REACHED`, `Retry-After` until the 1st) is
+   * thrown at once, with `retryAfter` on the error.
    *
    * Safe to retry beyond that, if you pass an `idempotency_key`: a repeat
    * returns the originally accepted message rather than creating a second event

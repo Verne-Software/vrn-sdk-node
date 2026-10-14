@@ -7,12 +7,22 @@ export { Gate } from './resources/gate/gate.js';
 export { Passepartout } from './resources/passepartout/passepartout.js';
 export { Clockwork } from './resources/clockwork/clockwork.js';
 
+// Signed-token verification (no API key needed)
+export { GateTokenVerifier } from './resources/gate/verifier.js';
+export type { GateTokenVerifierConfig } from './resources/gate/verifier.js';
+
 // Errors
-export { VerneError, VerneAPIError } from './core/errors.js';
-export type { APIErrorBody } from './core/errors.js';
+export { VerneError, VerneAPIError, VerneTokenError } from './core/errors.js';
+export type { APIErrorBody, TokenErrorReason } from './core/errors.js';
 
 // Core types
-export type { Paginated, RequestOptions, VerneConfig, ServiceConfig } from './core/types.js';
+export type {
+  Paginated,
+  ListParams,
+  RequestOptions,
+  VerneConfig,
+  ServiceConfig,
+} from './core/types.js';
 
 // Relay types
 export type {
@@ -31,11 +41,41 @@ export type {
   SecuritySettings,
   OidcProvider,
   LoginFlow,
+  LoginFlowParams,
+  RegistrationFlowParams,
+  OidcExchangeResult,
   AccessToken,
   CreateTokenParams,
   IntrospectResult,
   AuthorizeParams,
   AuthorizeResult,
+  OrganizationAuthorizeReason,
+  OrgClaim,
+  SignedToken,
+  SignedTokenClaims,
+  VerifySignedOptions,
+  GateSession,
+  SessionCheck,
+  Organization,
+  CreateOrganizationParams,
+  UpdateOrganizationParams,
+  Role,
+  CreateRoleParams,
+  UpdateRoleParams,
+  Member,
+  AddMemberParams,
+  UpdateMemberParams,
+  AuditActorType,
+  AuditLogEntry,
+  ListAuditLogParams,
+  LifecycleRuleKind,
+  LifecycleRuleParamsByKind,
+  LifecycleRule,
+  LifecycleRules,
+  SetLifecycleRuleParams,
+  LifecycleRulePreview,
+  LifecycleAction,
+  ListLifecycleActionsParams,
 } from './resources/gate/types.js';
 
 // Passepartout types
@@ -54,4 +94,5 @@ export type {
   DelayedJob,
   CreateDelayedJobParams,
   Execution,
+  ClockworkUsage,
 } from './resources/clockwork/types.js';

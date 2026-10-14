@@ -2,17 +2,10 @@ export { Gate } from './gate.js';
 export { IdentitiesResource } from './identities.js';
 export { TokensResource } from './tokens.js';
 export { SettingsResource } from './settings.js';
-export type {
-  Identity,
-  IdentityTraits,
-  CreateIdentityParams,
-  JsonPatchOp,
-  SecuritySettings,
-  OidcProvider,
-  LoginFlow,
-  AccessToken,
-  CreateTokenParams,
-  IntrospectResult,
-  AuthorizeParams,
-  AuthorizeResult,
-} from './types.js';
+export { OrganizationsResource, RolesResource, MembersResource } from './organizations.js';
+export { SessionsResource } from './sessions.js';
+export { AuditLogResource } from './audit-log.js';
+export { LifecycleResource } from './lifecycle.js';
+export { GateTokenVerifier } from './verifier.js';
+export type { GateTokenVerifierConfig } from './verifier.js';
+export type * from './types.js';

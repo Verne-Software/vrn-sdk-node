@@ -8,4 +8,5 @@ export type {
   DelayedJob,
   CreateDelayedJobParams,
   Execution,
+  ClockworkUsage,
 } from './types.js';

@@ -17,6 +17,7 @@ const CRON_JOB = {
   tenant_id: 'ten_1',
   name: 'nightly-report',
   schedule: '0 2 * * *',
+  timezone: 'UTC',
   url: 'https://example.com/hooks/report',
   method: 'POST',
   headers: {},
@@ -115,6 +116,52 @@ describe('Clockwork', () => {
       expect(url).toBe('https://api.vernesoft.com/v1/clockwork/jobs/job_1');
       expect(init?.method).toBe('PATCH');
       expect(JSON.parse(init?.body as string)).toEqual({ is_active: false });
+    });
+  });
+
+  describe('timezone', () => {
+    it('create() sends timezone and the job carries it back', async () => {
+      const paris = { ...CRON_JOB, schedule: '0 9 * * *', timezone: 'Europe/Paris', next_run_at: '2026-10-16T07:00:00Z' };
+      const spy = mockFetch(201, paris);
+
+      const job = await clockwork.jobs.create({
+        name: 'morning',
+        schedule: '0 9 * * *',
+        timezone: 'Europe/Paris',
+        url: 'https://example.com/hooks/morning',
+      });
+
+      expect(job.timezone).toBe('Europe/Paris');
+      expect(job.next_run_at).toBe('2026-10-16T07:00:00Z');
+      expect(JSON.parse(spy.mock.calls[0][1]?.body as string)).toEqual({
+        name: 'morning',
+        schedule: '0 9 * * *',
+        timezone: 'Europe/Paris',
+        url: 'https://example.com/hooks/morning',
+      });
+    });
+
+    it('update() sends only the new timezone', async () => {
+      const spy = mockFetch(200, { ...CRON_JOB, timezone: 'America/New_York' });
+
+      const job = await clockwork.jobs.update('job_1', { timezone: 'America/New_York' });
+
+      expect(job.timezone).toBe('America/New_York');
+      expect(JSON.parse(spy.mock.calls[0][1]?.body as string)).toEqual({ timezone: 'America/New_York' });
+    });
+
+    it('an unknown zone is 400 invalid_payload', async () => {
+      mockFetch(400, {
+        error: { code: 'invalid_payload', message: 'Unknown timezone "Mars/Olympus".', request_id: 'req_tz' },
+      });
+
+      const err = await clockwork.jobs
+        .create({ name: 'x', schedule: '0 9 * * *', timezone: 'Mars/Olympus', url: 'https://example.com' })
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(VerneAPIError);
+      expect((err as VerneAPIError).status).toBe(400);
+      expect((err as VerneAPIError).code).toBe('invalid_payload');
     });
   });
 

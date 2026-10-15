@@ -12,6 +12,16 @@ export class IdentitiesResource {
    * A `409 conflict` means you already have an end user with this address; the same
    * address at another tenant is a different person and does not conflict. Traits are
    * `email` and `locale` only — keep your own fields in custom metadata.
+   *
+   * @example
+   * // Import a user from another system: their bcrypt hash, a confirmed address, metadata.
+   * await gate.identities.create({
+   *   schema_id: 'user',
+   *   traits: { email: 'ada@example.com' },
+   *   credentials: { password: { config: { hashed_password: '$2b$10$…' } } },
+   *   email_verified: true,
+   *   metadata_public: { previous_user_id: 'auth0|64f1c0ffee' },
+   * });
    */
   async create(params: CreateIdentityParams, options?: RequestOptions): Promise<Identity> {
     return this.http.post<Identity>('/v1/gate/identities', { body: params, ...options });

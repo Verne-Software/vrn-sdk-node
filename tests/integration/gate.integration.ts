@@ -53,7 +53,7 @@ async function expectApiError(promise: Promise<unknown>, status: number, code?: 
 
 /** A password login through the flow's `ui.action` — the part an SDK leaves to the browser. */
 async function passwordLogin(gate: Gate, identifier: string, secret: string): Promise<string> {
-  const flow = (await gate.createLoginFlow()) as { ui: { action: string } };
+  const flow = await gate.createLoginFlow();
   const res = await fetch(flow.ui.action, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

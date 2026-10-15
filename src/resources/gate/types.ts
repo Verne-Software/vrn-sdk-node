@@ -38,6 +38,11 @@ export interface IdentityTraits {
 
 /**
  * Parameters for creating a new identity (end user) bound to your tenant.
+ *
+ * To move users from another system, send the bcrypt hash of their password
+ * (`credentials.password.config.hashed_password`), the social accounts they used
+ * (`credentials.oidc`), `email_verified: true` for an address that system had already
+ * confirmed, and your own fields in `metadata_public`.
  */
 export interface CreateIdentityParams {
   /** Must be 'user'. */
@@ -50,14 +55,49 @@ export interface CreateIdentityParams {
     email: string;
     locale?: string;
   };
-  credentials?: {
-    password?: {
-      config: {
-        password: string;
-      };
+  credentials?: IdentityCredentialsInput;
+  state?: 'active' | 'inactive';
+  /**
+   * `true` creates the user with the address already confirmed (`verified: true`,
+   * `status: 'completed'`); absent or `false` leaves it unconfirmed. It is your word that
+   * the address is confirmed: Gate sends no mail to check it.
+   */
+  email_verified?: boolean;
+  /** Your custom metadata for the user, set at creation. The user can read it; keep secrets out. */
+  metadata_public?: Record<string, unknown>;
+}
+
+/** Credentials of a new identity: a password (or its hash) and linked social accounts. */
+export interface IdentityCredentialsInput {
+  password?: {
+    /** Give `password` or `hashed_password`, not both. */
+    config: {
+      /** The initial password, in clear. */
+      password?: string;
+      /**
+       * A bcrypt hash (`$2a$…` or `$2b$…`) of the user's existing password; the user then
+       * signs in with their original password.
+       */
+      hashed_password?: string;
     };
   };
-  state?: 'active' | 'inactive';
+  oidc?: {
+    config: {
+      /**
+       * Social accounts to link. When the user signs in with that provider and it reports
+       * the same `subject`, they land on this identity rather than a new one.
+       */
+      providers: OidcCredentialProvider[];
+    };
+  };
+}
+
+/** A social account linked to an identity at creation. */
+export interface OidcCredentialProvider {
+  /** A Gate provider id, e.g. `'google'`, `'github'`. */
+  provider: string;
+  /** That provider's id for the account. `provider` + `subject`: at most 254 characters. */
+  subject: string;
 }
 
 /**
@@ -95,12 +135,86 @@ export interface OidcProvider {
 }
 
 /**
- * A Kratos self-service auth flow returned by {@link Gate.createLoginFlow}.
- *
- * The shape mirrors the raw Ory Kratos flow JSON (`ui.nodes`, `ui.action`,
- * …); pass it straight to your browser-side code to render social buttons.
+ * A message in a flow: an error to show (`'error'`), a notice (`'info'`) or a success.
+ * `id` is the identity service's numeric message id, e.g. `4000006` for wrong credentials.
  */
-export type LoginFlow = Record<string, unknown>;
+export interface UiText {
+  id: number;
+  text: string;
+  type: 'info' | 'error' | 'success' | (string & {});
+  context?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/**
+ * The attributes of a {@link UiNode}. For an `input` node: `name`, `type`, `value`,
+ * `required`, `disabled`; for `a` / `img` / `script` / `text` nodes the HTML-like fields
+ * of that element (`href`, `src`, `text`, …).
+ */
+export interface UiNodeAttributes {
+  /** `'input'`, `'a'`, `'img'`, `'script'`, `'text'` or `'div'` — the same as the node's `type`. */
+  node_type: string;
+  name?: string;
+  type?: string;
+  value?: unknown;
+  required?: boolean;
+  disabled?: boolean;
+  [key: string]: unknown;
+}
+
+/** One field, button, link or image of a flow's form. */
+export interface UiNode {
+  type: 'input' | 'a' | 'img' | 'script' | 'text' | 'div' | (string & {});
+  /** `'default'`, `'password'`, `'code'`, `'oidc'`, `'profile'`, `'totp'`, … */
+  group: string;
+  attributes: UiNodeAttributes;
+  messages: UiText[];
+  meta: { label?: UiText; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+/** The form of a flow: where to post it, how, and what it contains. */
+export interface FlowUi {
+  /** The URL to post the user's input to, e.g. a password login. */
+  action: string;
+  method: string;
+  nodes: UiNode[];
+  /** Flow-level messages, e.g. wrong credentials or "code sent". */
+  messages?: UiText[];
+  [key: string]: unknown;
+}
+
+/**
+ * A Kratos self-service flow (login, registration, …), as the identity service returns
+ * it. The documented fields are typed; any other field stays reachable through the index
+ * signature.
+ */
+export interface SelfServiceFlow {
+  id: string;
+  /** `'api'` for every flow started through Gate. */
+  type: 'api' | 'browser' | (string & {});
+  expires_at: string;
+  issued_at: string;
+  request_url: string;
+  return_to?: string;
+  /** Where the flow stands, e.g. `'choose_method'`, `'sent_email'`. */
+  state?: string;
+  ui: FlowUi;
+  [key: string]: unknown;
+}
+
+/**
+ * A login flow returned by {@link Gate.createLoginFlow}: render its `ui.nodes`, or post
+ * the user's credentials to `ui.action`.
+ */
+export interface LoginFlow extends SelfServiceFlow {
+  /** The assurance level the flow asks for: `'aal2'` for a step-up. */
+  requested_aal?: 'aal1' | 'aal2' | (string & {});
+  refresh?: boolean;
+}
+
+/** A registration flow returned by {@link Gate.createRegistrationFlow}. */
+export type RegistrationFlow = SelfServiceFlow;
 
 /** Optional parameters of `gate.createLoginFlow()`. */
 export interface LoginFlowParams {

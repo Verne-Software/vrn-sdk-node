@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Gate, VerneAPIError } from '../src/index.js';
+import { Gate, VerneAPIError, type CreateIdentityParams, type LoginFlow } from '../src/index.js';
 
 const API_KEY = 'vrn_9f8a7c1b2d3e4f50';
 
@@ -43,6 +43,36 @@ describe('Gate', () => {
       expect(url).toBe('https://api.vernesoft.com/v1/gate/identities');
       expect(init?.method).toBe('POST');
       expect((init?.headers as Record<string, string>)['Authorization']).toBe(`Bearer ${API_KEY}`);
+    });
+  });
+
+  describe('identities.create() for an import', () => {
+    it('sends the password hash, social accounts, email_verified and metadata_public', async () => {
+      const identity = {
+        id: 'identity_2',
+        schema_id: 'user',
+        state: 'active',
+        traits: { email: 'ada@example.com' },
+        metadata_public: { previous_user_id: 'auth0|64f1c0ffee' },
+        verifiable_addresses: [{ value: 'ada@example.com', verified: true, via: 'email', status: 'completed' }],
+      };
+      const spy = mockFetch(201, identity);
+
+      const params: CreateIdentityParams = {
+        schema_id: 'user',
+        traits: { email: 'ada@example.com' },
+        credentials: {
+          password: { config: { hashed_password: '$2b$10$pl0VVKxZkNvtC9ttGwsT8.vPL8qWeEevw4a6FraeqQR8GQ6mT63NG' } },
+          oidc: { config: { providers: [{ provider: 'google', subject: '109876543210987654321' }] } },
+        },
+        email_verified: true,
+        metadata_public: { previous_user_id: 'auth0|64f1c0ffee' },
+      };
+      const result = await gate.identities.create(params);
+
+      expect(result.verifiable_addresses?.[0].verified).toBe(true);
+      expect(result.metadata_public).toEqual({ previous_user_id: 'auth0|64f1c0ffee' });
+      expect(JSON.parse(spy.mock.calls[0][1]?.body as string)).toEqual(params);
     });
   });
 
@@ -299,9 +329,48 @@ describe('Gate', () => {
       const result = await gate.createLoginFlow();
 
       expect(result).toEqual(flow);
+      // Typed: no cast needed to reach the form.
+      const action: string = result.ui.action;
+      expect(action).toBe('https://api.vernesoft.com/auth/x');
       const [url, init] = spy.mock.calls[0];
       expect(url).toBe('https://api.vernesoft.com/v1/gate/auth/login');
       expect(init?.method).toBe('GET');
+    });
+  });
+
+  describe('flow types', () => {
+    it('ui.action, ui.nodes and node attributes are reachable without a cast', async () => {
+      const raw = {
+        id: 'flow_2',
+        type: 'api',
+        expires_at: '2026-10-15T12:00:00Z',
+        issued_at: '2026-10-15T11:00:00Z',
+        request_url: 'https://api.vernesoft.com/self-service/login/api',
+        state: 'choose_method',
+        organization_id: null,
+        ui: {
+          action: 'https://api.vernesoft.com/auth/self-service/login?flow=flow_2',
+          method: 'POST',
+          nodes: [
+            {
+              type: 'input',
+              group: 'password',
+              attributes: { name: 'identifier', type: 'text', value: '', required: true, node_type: 'input' },
+              messages: [],
+              meta: { label: { id: 1070004, text: 'ID', type: 'info' } },
+            },
+          ],
+        },
+      };
+      mockFetch(200, raw);
+
+      const flow: LoginFlow = await gate.createLoginFlow();
+      const names = flow.ui.nodes.filter((n) => n.group === 'password').map((n) => n.attributes.name);
+
+      expect(flow.ui.method).toBe('POST');
+      expect(names).toEqual(['identifier']);
+      expect(flow.ui.nodes[0].meta.label?.text).toBe('ID');
+      expect(flow.organization_id).toBeNull();
     });
   });
 

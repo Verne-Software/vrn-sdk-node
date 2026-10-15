@@ -13,6 +13,7 @@ import type {
   LoginFlow,
   LoginFlowParams,
   OidcExchangeResult,
+  RegistrationFlow,
   RegistrationFlowParams,
 } from './types.js';
 
@@ -106,8 +107,8 @@ export class Gate {
   async createRegistrationFlow(
     params?: RegistrationFlowParams,
     options?: RequestOptions,
-  ): Promise<LoginFlow> {
-    return this.http.get<LoginFlow>('/v1/gate/auth/registration', {
+  ): Promise<RegistrationFlow> {
+    return this.http.get<RegistrationFlow>('/v1/gate/auth/registration', {
       query: { return_to: params?.return_to, state: params?.state },
       ...options,
     });

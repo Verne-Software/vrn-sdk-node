@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@verne-software/sdk.svg)](https://npmjs.org/package/@verne-software/sdk)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](#)
 
-The official Node.js and TypeScript library for the [Verne Nautilus](https://vernesoft.com) platform.
+The official Node.js and TypeScript library for [Nautilus by Verne Software](https://vernesoft.com): sign-in and users, webhook delivery, cron jobs and Telegram sign-in, behind one API key. Nautilus runs on servers in France. Documentation: [docs.vernesoft.com](https://docs.vernesoft.com).
 
 > **Server-side only.** API keys carry full access to the APIs they were created for and must never be used in browser or client-side code.
 

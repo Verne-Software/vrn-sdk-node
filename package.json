@@ -1,14 +1,31 @@
 {
   "name": "@verne-software/sdk",
-  "version": "1.4.0",
-  "description": "Official Node.js and TypeScript SDK for the Verne Nautilus platform",
+  "version": "1.4.1",
+  "description": "Official Node.js and TypeScript SDK for Nautilus by Verne Software: sign-in and users, webhook delivery, cron jobs and Telegram sign-in. Hosted in France.",
   "license": "MIT",
   "author": "Verne Software",
   "homepage": "https://vernesoft.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Verne-Software/vrn-sdk-node"
+    "url": "git+https://github.com/Verne-Software/vrn-sdk-node.git"
   },
+  "bugs": {
+    "url": "https://github.com/Verne-Software/vrn-sdk-node/issues"
+  },
+  "keywords": [
+    "nautilus",
+    "verne",
+    "sdk",
+    "authentication",
+    "webhooks",
+    "cron",
+    "telegram-login",
+    "jwt",
+    "ory-kratos",
+    "svix",
+    "gdpr",
+    "eu-hosted"
+  ],
   "publishConfig": {
     "access": "public"
   },

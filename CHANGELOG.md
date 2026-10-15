@@ -4,7 +4,25 @@ All notable changes to `@verne-software/sdk`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.4.1] — unreleased
+## [1.5.0] — unreleased
+
+### Added
+
+- **Time zones for cron jobs**: `CronJob.timezone` (an IANA name, `'UTC'` unless set), and
+  `timezone` on `clockwork.jobs.create()` and `update()`. `'0 9 * * *'` in
+  `'Europe/Paris'` runs at 09:00 Paris time all year round; `next_run_at` stays in UTC. An
+  unknown zone is `400 invalid_payload`.
+- **Importing users**: `CreateIdentityParams` types `email_verified`, `metadata_public` and
+  the credentials an import sends — `credentials.password.config.hashed_password` (bcrypt)
+  and `credentials.oidc.config.providers` (`IdentityCredentialsInput`,
+  `OidcCredentialProvider`). The SDK already sent them; TypeScript no longer needs a cast.
+- **Typed self-service flows**: `LoginFlow` (and the new `RegistrationFlow`, returned by
+  `createRegistrationFlow()`) type `id`, `type`, `expires_at`, `ui.action`, `ui.method`,
+  `ui.nodes` (`UiNode`, `UiNodeAttributes`) and `ui.messages` (`UiText`), so
+  `flow.ui.action` type-checks without a cast. Other fields stay reachable through the
+  index signature. `SelfServiceFlow` and `FlowUi` are exported.
+
+## [1.4.1] — 2026-10-15
 
 ### Changed
 

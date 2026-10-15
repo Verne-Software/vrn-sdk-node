@@ -7,8 +7,13 @@ export interface CronJob {
   id: string;
   tenant_id: string;
   name: string;
-  /** Cron expression, e.g. `'0 * * * *'` (hourly). */
+  /** Cron expression, e.g. `'0 * * * *'` (hourly), read in {@link CronJob.timezone}. */
   schedule: string;
+  /**
+   * IANA time zone the schedule is read in, e.g. `'Europe/Paris'`; `'UTC'` unless set.
+   * `next_run_at` and every other timestamp stay in UTC.
+   */
+  timezone: string;
   url: string;
   method: string;
   headers: Record<string, string>;
@@ -25,6 +30,12 @@ export interface CreateCronJobParams {
   name: string;
   /** Cron expression, e.g. `'0 * * * *'` (hourly). */
   schedule: string;
+  /**
+   * IANA time zone to read `schedule` in, e.g. `'Europe/Paris'`: `'0 9 * * *'` is then
+   * 09:00 in Paris all year round, across daylight-saving changes. Default `'UTC'`. An
+   * unknown name (or an offset like `'+02:00'`) is `400 invalid_payload`.
+   */
+  timezone?: string;
   url: string;
   /** HTTP method to invoke the target URL with. Defaults to `POST`. */
   method?: string;
@@ -40,6 +51,8 @@ export interface UpdateCronJobParams {
   name?: string;
   /** Cron expression, e.g. `'0 * * * *'` (hourly). */
   schedule?: string;
+  /** New IANA time zone, e.g. `'Europe/Paris'`. Recomputes `next_run_at` at once. */
+  timezone?: string;
   url?: string;
   method?: string;
   headers?: Record<string, string>;

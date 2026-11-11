@@ -455,6 +455,8 @@ export interface Organization {
   id: string;
   /** Free text, 1–120 characters, not unique. */
   name: string;
+  /** How many people hold a role in the organization right now. */
+  member_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -475,6 +477,11 @@ export interface Role {
   name: string;
   /** Sorted and de-duplicated by the API. */
   permissions: string[];
+  /**
+   * How many people hold the role right now. A role someone holds cannot be deleted
+   * (`409 conflict`, reason `'role_held'`).
+   */
+  member_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -497,6 +504,13 @@ export interface Member {
   organization_id: string;
   identity_id: string;
   role_id: string;
+  /** The person's address, or `null` when they have none (a Telegram user has no email). */
+  email: string | null;
+  /**
+   * What the person is called, or `null`: the `display_name` trait, or for a Telegram user
+   * the first name (failing that, the username) they signed in with.
+   */
+  display_name: string | null;
   /** When the membership ends, or `null` for never. */
   expires_at: string | null;
   created_at: string;

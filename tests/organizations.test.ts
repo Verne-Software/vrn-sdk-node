@@ -28,12 +28,19 @@ function call(spy: ReturnType<typeof mockFetch>, n = 0) {
   };
 }
 
-const org = { id: ORG, name: 'Acme', created_at: '2026-10-14T09:00:00Z', updated_at: '2026-10-14T09:00:00Z' };
+const org = {
+  id: ORG,
+  name: 'Acme',
+  member_count: 12,
+  created_at: '2026-10-14T09:00:00Z',
+  updated_at: '2026-10-14T09:00:00Z',
+};
 const role = {
   id: ROLE,
   organization_id: ORG,
   name: 'admin',
   permissions: ['invoices:read', 'invoices:write'],
+  member_count: 3,
   created_at: '2026-10-14T09:01:00Z',
   updated_at: '2026-10-14T09:01:00Z',
 };
@@ -41,11 +48,14 @@ const member = {
   organization_id: ORG,
   identity_id: USER,
   role_id: ROLE,
+  email: 'alice@example.com',
+  display_name: 'Alice',
   expires_at: null,
   created_at: '2026-10-14T09:02:00Z',
   updated_at: '2026-10-14T09:02:00Z',
 };
 const page = <T>(data: T[]) => ({ data, has_more: false, next_cursor: null });
+const counted = <T>(data: T[], total: number) => ({ ...page(data), total });
 
 describe('gate.organizations', () => {
   let gate: Gate;
@@ -77,6 +87,33 @@ describe('gate.organizations', () => {
     const result = await gate.organizations.list();
     expect(call(spy2, 1).url).toBe(`${BASE}/v1/gate/organizations`);
     expect(result.has_more).toBe(false);
+  });
+
+  it('list() carries total, and each organization its member_count', async () => {
+    mockFetch(200, { data: [org], has_more: true, next_cursor: 'c2', total: 37 });
+    const result = await gate.organizations.list({ limit: 1 });
+    expect(result.total).toBe(37);
+    expect(result.next_cursor).toBe('c2');
+    expect(result.data[0].member_count).toBe(12);
+
+    mockFetch(200, org);
+    expect((await gate.organizations.get(ORG)).member_count).toBe(12);
+  });
+
+  it('a missing organization is 404 not_found with reason organization', async () => {
+    mockFetch(404, {
+      error: {
+        code: 'not_found',
+        message: 'Organization not found.',
+        request_id: 'req_1',
+        reason: 'organization',
+      },
+    });
+    const err = await gate.organizations.get(ORG).catch((e) => e);
+    expect(err).toBeInstanceOf(VerneAPIError);
+    expect(err.status).toBe(404);
+    expect(err.code).toBe('not_found');
+    expect(err.reason).toBe('organization');
   });
 
   it('get(), update() and delete() address one organization', async () => {
@@ -132,18 +169,52 @@ describe('gate.organizations', () => {
       expect(call(spy, 3).method).toBe('DELETE');
     });
 
-    it('a role still held surfaces as a 409 conflict', async () => {
+    it('list() carries total; a role carries member_count', async () => {
+      mockFetch(200, counted([role], 2));
+      const result = await gate.organizations.roles.list(ORG);
+      expect(result.total).toBe(2);
+      expect(result.data[0].member_count).toBe(3);
+    });
+
+    it('a role still held surfaces as 409 conflict with reason role_held', async () => {
       mockFetch(409, {
         error: {
           code: 'conflict',
           message: 'This role is held by 1 member and cannot be deleted.',
           request_id: 'req_1',
+          reason: 'role_held',
         },
       });
       const err = await gate.organizations.roles.delete(ORG, ROLE).catch((e) => e);
       expect(err).toBeInstanceOf(VerneAPIError);
       expect(err.status).toBe(409);
       expect(err.code).toBe('conflict');
+      expect(err.reason).toBe('role_held');
+      // Kept where 1.5 put it, so code reading details.reason still works.
+      expect(err.details.reason).toBe('role_held');
+    });
+
+    it('a taken role name is 409 conflict with reason role_name_taken', async () => {
+      mockFetch(409, {
+        error: {
+          code: 'conflict',
+          message: 'This organization already has a role with that name.',
+          request_id: 'req_1',
+          reason: 'role_name_taken',
+        },
+      });
+      const err = await gate.organizations.roles.create(ORG, { name: 'admin' }).catch((e) => e);
+      expect(err.code).toBe('conflict');
+      expect(err.reason).toBe('role_name_taken');
+    });
+
+    it('a role limit hit is 409 limit_reached with no reason', async () => {
+      mockFetch(409, {
+        error: { code: 'limit_reached', message: 'An organization has at most 100 roles.', request_id: 'r' },
+      });
+      const err = await gate.organizations.roles.create(ORG, { name: 'r101' }).catch((e) => e);
+      expect(err.code).toBe('limit_reached');
+      expect(err.reason).toBeUndefined();
     });
   });
 
@@ -179,10 +250,43 @@ describe('gate.organizations', () => {
       expect(call(spy, 2).body).toEqual({ expires_at: '2027-03-31T23:59:59Z' });
     });
 
+    it('every member answer carries email and display_name, null when the person has none', async () => {
+      mockFetch(201, member);
+      const added = await gate.organizations.members.add(ORG, { identity_id: USER, role_id: ROLE });
+      expect(added.email).toBe('alice@example.com');
+      expect(added.display_name).toBe('Alice');
+
+      // A Telegram user: no address, the first name they signed in with.
+      mockFetch(200, { ...member, email: null, display_name: 'Jules' });
+      const updated = await gate.organizations.members.update(ORG, USER, { role_id: ROLE });
+      expect(updated.email).toBeNull();
+      expect(updated.display_name).toBe('Jules');
+    });
+
+    it('add() refusals carry their reason: end_user, already_member', async () => {
+      mockFetch(404, {
+        error: { code: 'not_found', message: 'End user not found.', request_id: 'r', reason: 'end_user' },
+      });
+      const missing = await gate.organizations.members
+        .add(ORG, { identity_id: USER, role_id: ROLE })
+        .catch((e) => e);
+      expect([missing.status, missing.code, missing.reason]).toEqual([404, 'not_found', 'end_user']);
+
+      mockFetch(409, {
+        error: { code: 'conflict', message: 'Already a member.', request_id: 'r', reason: 'already_member' },
+      });
+      const twice = await gate.organizations.members
+        .add(ORG, { identity_id: USER, role_id: ROLE })
+        .catch((e) => e);
+      expect([twice.status, twice.code, twice.reason]).toEqual([409, 'conflict', 'already_member']);
+    });
+
     it('list() and remove()', async () => {
-      const spy = mockFetch(200, page([member]));
+      const spy = mockFetch(200, counted([member], 1));
       const result = await gate.organizations.members.list(ORG);
       expect(result.data[0].expires_at).toBeNull();
+      expect(result.data[0].email).toBe('alice@example.com');
+      expect(result.total).toBe(1);
       expect(call(spy).url).toBe(`${BASE}/v1/gate/organizations/${ORG}/members`);
 
       mockFetch(204, null);

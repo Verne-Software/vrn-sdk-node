@@ -10,6 +10,16 @@ export interface Paginated<T> {
   next_cursor?: string | null;
 }
 
+/**
+ * A page of a list that also counts its items: the organizations of a project, the roles
+ * of an organization, its members. `total` is how many the whole list has, the same on
+ * every page whatever `limit` and `cursor` say — enough to show "37 organizations" without
+ * walking the pages.
+ */
+export interface PaginatedWithTotal<T> extends Paginated<T> {
+  total: number;
+}
+
 /** Query parameters shared by every cursor-paged list. */
 export interface ListParams {
   /** Items per page, 1 to 100. Defaults to 20; the server clamps values outside the range. */

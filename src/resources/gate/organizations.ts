@@ -1,6 +1,6 @@
 import { seg } from '../../core/http.js';
 import type { HttpClient } from '../../core/http.js';
-import type { ListParams, Paginated, RequestOptions } from '../../core/types.js';
+import type { ListParams, PaginatedWithTotal, RequestOptions } from '../../core/types.js';
 import type {
   AddMemberParams,
   AuthorizeResult,
@@ -40,14 +40,21 @@ export class OrganizationsResource {
     return this.http.post<Organization>('/v1/gate/organizations', { body: params, ...options });
   }
 
-  /** Lists the project's organizations, oldest first, cursor-paged. */
-  async list(params?: ListParams, options?: RequestOptions): Promise<Paginated<Organization>> {
-    return this.http.get<Paginated<Organization>>('/v1/gate/organizations', {
+  /**
+   * Lists the project's organizations, oldest first, cursor-paged. `total` is how many the
+   * project has in all.
+   */
+  async list(
+    params?: ListParams,
+    options?: RequestOptions,
+  ): Promise<PaginatedWithTotal<Organization>> {
+    return this.http.get<PaginatedWithTotal<Organization>>('/v1/gate/organizations', {
       query: pageQuery(params),
       ...options,
     });
   }
 
+  /** One organization. `404 not_found` with reason `'organization'` if the project has none by that id. */
   async get(orgId: string, options?: RequestOptions): Promise<Organization> {
     return this.http.get<Organization>(orgPath(orgId), options);
   }
@@ -110,19 +117,20 @@ export class RolesResource {
   constructor(private readonly http: HttpClient) {}
 
   /**
-   * Defines a role. `409 conflict` if the name is taken in the organization,
-   * `409 limit_reached` past 100 roles.
+   * Defines a role. `409 conflict` with reason `'role_name_taken'` if the name is taken in
+   * the organization, `409 limit_reached` past 100 roles.
    */
   async create(orgId: string, params: CreateRoleParams, options?: RequestOptions): Promise<Role> {
     return this.http.post<Role>(`${orgPath(orgId)}/roles`, { body: params, ...options });
   }
 
+  /** The organization's roles, cursor-paged; `total` is how many it has in all. */
   async list(
     orgId: string,
     params?: ListParams,
     options?: RequestOptions,
-  ): Promise<Paginated<Role>> {
-    return this.http.get<Paginated<Role>>(`${orgPath(orgId)}/roles`, {
+  ): Promise<PaginatedWithTotal<Role>> {
+    return this.http.get<PaginatedWithTotal<Role>>(`${orgPath(orgId)}/roles`, {
       query: pageQuery(params),
       ...options,
     });
@@ -148,7 +156,10 @@ export class RolesResource {
     });
   }
 
-  /** Deletes a role. A role someone holds is refused with `409 conflict`. */
+  /**
+   * Deletes a role. A role someone holds is refused with `409 conflict`, reason
+   * `'role_held'` — `member_count` on the role says so before you try.
+   */
   async delete(orgId: string, roleId: string, options?: RequestOptions): Promise<void> {
     return this.http.delete<void>(`${orgPath(orgId)}/roles/${seg(roleId)}`, options);
   }
@@ -159,9 +170,9 @@ export class MembersResource {
   constructor(private readonly http: HttpClient) {}
 
   /**
-   * Gives an end user a role in the organization. `404` if the identity is not one of
-   * your end users, `409` if they already are a member (change the role with
-   * {@link update}).
+   * Gives an end user a role in the organization. `404 not_found` with reason `'end_user'`
+   * if the identity is not one of your end users, `409 conflict` with reason
+   * `'already_member'` if they already are a member (change the role with {@link update}).
    */
   async add(orgId: string, params: AddMemberParams, options?: RequestOptions): Promise<Member> {
     const body: Record<string, unknown> = {
@@ -172,12 +183,16 @@ export class MembersResource {
     return this.http.post<Member>(`${orgPath(orgId)}/members`, { body, ...options });
   }
 
+  /**
+   * The organization's members with their `email` and `display_name`, cursor-paged;
+   * `total` is how many it has in all.
+   */
   async list(
     orgId: string,
     params?: ListParams,
     options?: RequestOptions,
-  ): Promise<Paginated<Member>> {
-    return this.http.get<Paginated<Member>>(`${orgPath(orgId)}/members`, {
+  ): Promise<PaginatedWithTotal<Member>> {
+    return this.http.get<PaginatedWithTotal<Member>>(`${orgPath(orgId)}/members`, {
       query: pageQuery(params),
       ...options,
     });
@@ -185,7 +200,8 @@ export class MembersResource {
 
   /**
    * Changes a member's role and/or deadline. `expires_at`: leave it out to keep the
-   * deadline, `null` to remove it, a time to set it.
+   * deadline, `null` to remove it, a time to set it. `404 not_found` with reason
+   * `'member'` if the person is not a member.
    */
   async update(
     orgId: string,

@@ -6,6 +6,8 @@ All notable changes to `@verne-software/sdk`. The format follows
 
 ## [1.6.0] — unreleased
 
+The first release on npm since 1.4.1: it also carries everything in 1.5.0 below.
+
 What the organization routes answer since Nautilus v1.10.44, typed.
 
 ### Added
@@ -30,7 +32,9 @@ What the organization routes answer since Nautilus v1.10.44, typed.
   `previous_name` in `details`). `auditLog.list({ action })` takes them as it takes any
   action; nothing changed in the SDK for that.
 
-## [1.5.0] — unreleased
+## [1.5.0] — tagged 2026-10-25, not published
+
+Tagged `v1.5.0` but never published to npm: its changes reach npm in 1.6.0. Going from 1.4.1 to 1.6.0 brings everything below.
 
 ### Added
 

@@ -36,6 +36,15 @@ export class VerneAPIError extends VerneError {
    */
   readonly details: Record<string, unknown>;
   /**
+   * Which one of its kind the error is, when the API says: on the organization routes a
+   * `404 not_found` names what was not found (`'organization'`, `'role'`, `'member'`,
+   * `'end_user'`, `'project'`) and a `409 conflict` why it is one (`'role_name_taken'`,
+   * `'role_held'`, `'already_member'`). See {@link ErrorReason}. `code` is unchanged, so
+   * code that ignores `reason` behaves as before. Undefined when the error has none — and
+   * for a body that is not the API's envelope. The same value stays in `details.reason`.
+   */
+  readonly reason?: ErrorReason | (string & {});
+  /**
    * Seconds from the `Retry-After` header, when the response had one — on a `429` it is
    * how long to wait. For `RELAY_MESSAGE_LIMIT_REACHED` it runs to the 1st of next month.
    */
@@ -49,6 +58,7 @@ export class VerneAPIError extends VerneError {
     status,
     requestId,
     details,
+    reason,
     retryAfter,
     body,
   }: {
@@ -57,6 +67,7 @@ export class VerneAPIError extends VerneError {
     status: number;
     requestId?: string;
     details?: Record<string, unknown>;
+    reason?: string;
     retryAfter?: number;
     body?: unknown;
   }) {
@@ -66,6 +77,7 @@ export class VerneAPIError extends VerneError {
     this.status = status;
     this.requestId = requestId;
     this.details = details ?? {};
+    this.reason = reason;
     this.retryAfter = retryAfter;
     this.body = body;
   }
@@ -79,7 +91,8 @@ export class VerneAPIError extends VerneError {
    * identity-service body whose `code` is a number (still what Kratos' own `/auth/*`
    * self-service routes answer). Anything unrecognised degrades — to code `'unknown'`,
    * to `HTTP <status>` — rather than throwing: an error path must never be the thing
-   * that fails.
+   * that fails. `reason` is read only from the envelope proper (a string `code`): in an
+   * identity-service body it is a sentence for people, not a code.
    */
   static fromResponse(status: number, body: unknown, retryAfter?: number): VerneAPIError {
     const envelope = isRecord(body) && isRecord(body.error) ? body.error : undefined;
@@ -95,11 +108,43 @@ export class VerneAPIError extends VerneError {
       status,
       requestId: typeof envelope?.request_id === 'string' ? envelope.request_id : undefined,
       details,
+      reason:
+        typeof envelope?.code === 'string' && typeof envelope.reason === 'string'
+          ? envelope.reason
+          : undefined,
       retryAfter,
       body,
     });
   }
 }
+
+/**
+ * The `reason` of a `404 not_found` or a `409 conflict` on the organization routes, in
+ * {@link VerneAPIError.reason}. The set is open: a route may grow a reason later, so keep a
+ * branch for one you do not know.
+ *
+ * | `code` | `reason` | When |
+ * |:--|:--|:--|
+ * | `not_found` | `organization` | No such organization in the key's project. |
+ * | `not_found` | `role` | No such role in that organization. |
+ * | `not_found` | `member` | The person is not a member of the organization. |
+ * | `not_found` | `end_user` | `identity_id` is not one of your end users. |
+ * | `not_found` | `project` | No such project. |
+ * | `conflict` | `role_name_taken` | The organization already has a role with that name. |
+ * | `conflict` | `role_held` | Someone holds the role, so it cannot be deleted. |
+ * | `conflict` | `already_member` | The person is already a member. |
+ *
+ * A role limit hit is `409 limit_reached`, with no reason.
+ */
+export type ErrorReason =
+  | 'organization'
+  | 'role'
+  | 'member'
+  | 'end_user'
+  | 'project'
+  | 'role_name_taken'
+  | 'role_held'
+  | 'already_member';
 
 /** Why a signed token was refused by {@link VerneTokenError}. */
 export type TokenErrorReason =

@@ -161,14 +161,21 @@ await verne.gate.organizations.members.add(org.id, {
 // Change the role or the deadline: leave expires_at out to keep it, null to remove it
 await verne.gate.organizations.members.update(org.id, identity.id, { expires_at: null });
 
-// Lists are cursor-paged: loop while has_more, passing next_cursor as cursor
-const { data, has_more, next_cursor } = await verne.gate.organizations.members.list(org.id, { limit: 50 });
+// Lists are cursor-paged: loop while has_more, passing next_cursor as cursor.
+// total is how many the whole list has, the same on every page.
+const { data, has_more, next_cursor, total } = await verne.gate.organizations.members.list(org.id, { limit: 50 });
+data[0].email;        // the member's address — null for a Telegram user
+data[0].display_name; // their name, or null
+
+// How many people hold a role in the organization, and hold this role
+(await verne.gate.organizations.get(org.id)).member_count;
+(await verne.gate.organizations.roles.get(org.id, admin.id)).member_count;
 
 // A user's organizations, with role and permissions in each
 const held = await verne.gate.identities.listOrganizations(identity.id);
 ```
 
-A role somebody holds cannot be deleted (`409 conflict`); a second role of the same name in one organization is `409 conflict`; past 100 roles, `409 limit_reached`.
+A role somebody holds cannot be deleted (`409 conflict`, `reason: 'role_held'` — its `member_count` says so before you try); a second role of the same name in one organization is `409 conflict` with `reason: 'role_name_taken'`; adding someone who already is a member, `reason: 'already_member'`; past 100 roles, `409 limit_reached`. A `404` on these routes says what was not found in `reason`: `'organization'`, `'role'`, `'member'` or `'end_user'` (an id that is not one of your end users).
 
 #### Checking a permission
 
@@ -386,6 +393,7 @@ try {
     err.status;     // HTTP status
     err.code;       // e.g. 'conflict' — branch on status + code
     err.message;    // a sentence to show a person
+    err.reason;     // on a 404/409 of the organization routes: which one, e.g. 'already_member'
     err.details;    // extra members of the error, e.g. { plan, limit, current }
     err.retryAfter; // seconds, when the response had Retry-After
     err.requestId;  // include in support requests
@@ -400,8 +408,8 @@ try {
 | 402 | `ACTIVE_USER_LIMIT_REACHED`, `UPGRADE_REQUIRED`, `JOB_LIMIT_REACHED`, `BILLING_HARD_BLOCKED`, `SUBSCRIPTION_PAST_DUE` | A plan or billing limit. Does not lift by waiting — the SDK never retries it. |
 | 403 | `forbidden` | The key lacks the scope for this API (`message` names it), or the resource is not yours. |
 | 403 | `plan_required`, `mfa_required`, `account_disabled` | A rule not in your plan; a second factor owed; a deactivated Telegram user. |
-| 404 | `not_found` | No such thing in your project. |
-| 409 | `conflict`, `limit_reached` | It already exists **in your account** (an end user with that address, a role name, a membership), a role still held, or a cap reached. |
+| 404 | `not_found` | No such thing in your project. On the organization routes `reason` says what: `organization`, `role`, `member`, `end_user`. |
+| 409 | `conflict`, `limit_reached` | It already exists **in your account** (an end user with that address, a role name, a membership), a role still held, or a cap reached. On the organization routes `reason` says which: `role_name_taken`, `role_held`, `already_member`. |
 | 429 | `rate_limited`, `RELAY_MESSAGE_LIMIT_REACHED` | Too fast, or Relay's monthly limit. |
 | 5xx | `upstream_unavailable`, `internal_error` | Retry; quote `requestId` to support. |
 

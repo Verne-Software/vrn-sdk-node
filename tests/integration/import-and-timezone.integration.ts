@@ -42,16 +42,16 @@ suite('1.5.0 against a live stack', () => {
     cleanup.push(() => verne.clockwork.jobs.delete(job.id));
 
     expect(job.timezone).toBe('Europe/Paris');
-    // 09:00 in Paris in October (CEST, UTC+2) is 07:00 UTC.
-    expect(job.next_run_at).toMatch(/T07:00:00(\.0+)?(Z|\+00:00)$/);
+    // 09:00 in Paris is 07:00 UTC in summer (CEST, UTC+2) and 08:00 UTC in winter (CET).
+    expect(job.next_run_at).toMatch(/T0[78]:00:00(\.0+)?(Z|\+00:00)$/);
 
     const listed = (await verne.clockwork.jobs.list()).find((j) => j.id === job.id);
     expect(listed?.timezone).toBe('Europe/Paris');
 
     const moved = await verne.clockwork.jobs.update(job.id, { timezone: 'America/New_York' });
     expect(moved.timezone).toBe('America/New_York');
-    // 09:00 in New York in October (EDT, UTC-4) is 13:00 UTC.
-    expect(moved.next_run_at).toMatch(/T13:00:00(\.0+)?(Z|\+00:00)$/);
+    // 09:00 in New York is 13:00 UTC in summer (EDT, UTC-4) and 14:00 UTC in winter (EST).
+    expect(moved.next_run_at).toMatch(/T1[34]:00:00(\.0+)?(Z|\+00:00)$/);
 
     await verne.clockwork.jobs.delete(job.id);
   });

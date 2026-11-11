@@ -4,7 +4,37 @@ All notable changes to `@verne-software/sdk`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.5.0] — unreleased
+## [1.6.0] — 2026-11-11
+
+The first release on npm since 1.4.1: it also carries everything in 1.5.0 below.
+
+What the organization routes answer since Nautilus v1.10.44, typed.
+
+### Added
+
+- **Who a member is**: `Member.email` and `Member.display_name`, on every answer that
+  carries a member (`members.add()`, `list()`, `update()`). Both are `null` when the person
+  has none: a Telegram user has no address, and their name is the first name (or the
+  username) they signed in with.
+- **Counts**: `Organization.member_count` (people holding a role in it) and
+  `Role.member_count` (people holding that role — a role with members cannot be deleted).
+  `organizations.list()`, `roles.list()` and `members.list()` return the new
+  `PaginatedWithTotal<T>`: `Paginated<T>` plus `total`, how many the whole list has, the
+  same on every page.
+- **Why a 404 or a 409**: `VerneAPIError.reason`. On the organization routes a
+  `404 not_found` names what was not found (`'organization'`, `'role'`, `'member'`,
+  `'end_user'`, `'project'`) and a `409 conflict` why it is one (`'role_name_taken'`,
+  `'role_held'`, `'already_member'`); the new `ErrorReason` type lists them. `code` is
+  unchanged, and the value stays in `details.reason` too, so 1.5 code behaves as before.
+  `reason` is read only from the API's envelope, never from an identity-service body
+  passed through on `/auth/*`, where it is a sentence.
+- The audit log records `organization.created` and `organization.updated` (a rename, with
+  `previous_name` in `details`). `auditLog.list({ action })` takes them as it takes any
+  action; nothing changed in the SDK for that.
+
+## [1.5.0] — tagged 2026-10-25, not published
+
+Tagged `v1.5.0` but never published to npm: its changes reach npm in 1.6.0. Going from 1.4.1 to 1.6.0 brings everything below.
 
 ### Added
 

@@ -13,11 +13,12 @@ export type { GateTokenVerifierConfig } from './resources/gate/verifier.js';
 
 // Errors
 export { VerneError, VerneAPIError, VerneTokenError } from './core/errors.js';
-export type { APIErrorBody, TokenErrorReason } from './core/errors.js';
+export type { APIErrorBody, ErrorReason, TokenErrorReason } from './core/errors.js';
 
 // Core types
 export type {
   Paginated,
+  PaginatedWithTotal,
   ListParams,
   RequestOptions,
   VerneConfig,

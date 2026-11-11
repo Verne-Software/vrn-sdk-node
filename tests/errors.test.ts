@@ -17,6 +17,45 @@ describe('VerneAPIError.fromResponse()', () => {
     expect(err.requestId).toBe('req_abc123');
   });
 
+  it('reads reason next to an unchanged code, and keeps it in details', () => {
+    const err = VerneAPIError.fromResponse(409, {
+      error: {
+        code: 'conflict',
+        message: 'This role is held by 2 members and cannot be deleted.',
+        request_id: 'req_1',
+        reason: 'role_held',
+      },
+    });
+    expect(err.code).toBe('conflict');
+    expect(err.reason).toBe('role_held');
+    expect(err.details).toEqual({ reason: 'role_held' });
+  });
+
+  it('has no reason when the envelope carries none', () => {
+    const err = VerneAPIError.fromResponse(404, {
+      error: { code: 'not_found', message: 'No such identity.', request_id: 'req_1' },
+    });
+    expect(err.reason).toBeUndefined();
+  });
+
+  it('passes an unknown reason through as it came', () => {
+    const err = VerneAPIError.fromResponse(409, {
+      error: { code: 'conflict', message: 'x', request_id: 'r', reason: 'something_new' },
+    });
+    expect(err.reason).toBe('something_new');
+  });
+
+  it("does not take an identity-service body's sentence for a reason", () => {
+    const err = VerneAPIError.fromResponse(400, {
+      error: { code: 400, status: 'Bad Request', reason: 'The request was malformed.', message: 'm' },
+    });
+    expect(err.reason).toBeUndefined();
+    const nonString = VerneAPIError.fromResponse(404, {
+      error: { code: 'not_found', message: 'm', reason: 42 },
+    });
+    expect(nonString.reason).toBeUndefined();
+  });
+
   it('surfaces validation details from a { detail: [...] } body', () => {
     const err = VerneAPIError.fromResponse(422, {
       detail: [
